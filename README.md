@@ -1,5 +1,3 @@
-# dot-settings
-
 Game settings as a validated document: declare each setting once, scope it to a device, an account or a server, and save it through a store you choose. A settings screen, a console and a migration all read the same declaration.
 
 ## Install
