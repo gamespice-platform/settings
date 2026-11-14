@@ -1,71 +1,26 @@
-This is the **settings** asset for TMC's **Dot** collection. It adds game settings as a bounded, validated document: declared once, scoped to a device or an account or a server, stored through a pluggable store, and shareable between games on purpose.
+# dot-settings
 
-This collection of assets provides modular building blocks for creating games and applications within the TMC ecosystem, ensuring consistency and interoperability across all `dot-*` assets. This includes core functionality, networking, authentication, cloud integration, and more.
+Game settings as a validated document: declare each setting once, scope it to a device, an account or a server, and save it through a store you choose. A settings screen, a console and a migration all read the same declaration.
 
-**These assets are COMPLETELY OPEN SOURCE**. You are free to use, modify, and distribute them under the terms of the MIT license. The only thing not open source is the back-end web infrastructure. So if you opt into using your own authentication backend instead of integrating with TMC, you will need to build and integrate your own back-end infrastructure.
+## Install
 
-## From Maintainer & WARNING
-This asset, along with all the others, was built initially with **Claude Code** and will continue to be maintained and extended using it. This is because I (`gamemann`) cannot build the entire TMC platform alone (I wish I could lol).
+1. Get [Godot 4.7](https://godotengine.org/download).
+2. Either use [dot-bootstrap](https://github.com/modcommunity/dot-bootstrap), which clones every project and links the addons, or copy `addons/dot_settings/` and [dot-core](https://github.com/modcommunity/dot-core)'s `addons/dot_core/` into your project and enable dot-settings in *Project > Project Settings > Plugins*.
 
-**Please treat this as partially tested.** Every asset has its own headless test suite and those suites pass, but very little of this has been in front of real players yet. Expect rough edges, and please report anything you run into.
+dot-core is the only dependency.
 
-## A setting is declared once, and the declaration is the interface
-
-The alternative, a dictionary of whatever somebody happened to store, is what makes a settings system rot. Nobody can enumerate it, nothing can validate it, a typo'd key is indistinguishable from a setting nobody has chosen yet, and the screen that lists them carries a second copy of the list.
+## Use
 
 ```gdscript
+var schema := DotSettingsSchema.new()
 schema.add(DotSettingsDef.number(&"master_volume", 0.8, 0.0, 1.0, &"audio"))
 schema.add(DotSettingsDef.integer(&"fov", 90, 70, 120, &"video")
     .with_scope(DotSettingsDef.Scope.SERVER_CLAMPED))
 schema.add(DotSettingsDef.binding(&"chat_open_key", "Y", &"chat")
     .with_scope(DotSettingsDef.Scope.ACCOUNT))
-```
 
-A binding is stored as the short text a person can read in a JSON file and type by hand — `"Y"`, `"Shift+A"`, `"Mouse 1"` — rather than as a keycode, which is a number that means a different key on a different keyboard layout. The value is opaque here: dot-ui's `DotInputBinding` is what turns it into an `InputEvent` and back.
-
-A screen enumerates the schema, a console completes against it, a store validates against it and a migration rewrites against it, so a new setting appears in all four without anybody editing four files.
-
-**The settings screen is free.** `DotSettingsManager.to_config()` hands back a `DotConfig` whose properties *are* the schema's keys, built through `_get_property_list` / `_get` / `_set`, and dot-ui generates a panel from any `DotConfig`. Nothing in this asset names a `Control`.
-
-## Three scopes, because a laptop and a desktop should disagree
-
-| | |
-| --- | --- |
-| `DEVICE` | Resolution, audio device, thread count. **Never** synchronised: a synchronised resolution is a setting that breaks itself every time a player switches machines. |
-| `ACCOUNT` | Sensitivity, crosshair, subtitles, language. Stored under `shared_namespace`, so two games that opt into the same name genuinely share one sensitivity, and a game that does not opt in is unaffected. |
-| `SERVER_CLAMPED` | Field of view, view models, third person. A server may cap these. |
-
-## A server may clamp, and may never read
-
-That asymmetry is the whole of the server half. Capping field of view is a legitimate competitive rule; asking a client to report its key bindings, its audio device or its screen resolution is a **fingerprint**: a stable identifier assembled from settings, which survives a new account and every ban a moderator issues. So there is no read direction in this asset at all.
-
-And a clamp is a **bound, not a value**:
-
-```gdscript
-settings.apply_server_clamps({"fov": 90})
-settings.get_value(&"fov")      # 90 for a player who wanted 110
-settings.chosen_value(&"fov")   # 110, what the screen shows
-```
-
-Every game that gets this wrong gets it wrong in the same direction, and the symptom is a setting that appears to reset itself on every join. What is saved is the choice, never the cap.
-
-## Written on change, not on quit
-
-Debounced by a few hundred milliseconds so dragging a slider is one write, and written atomically through a temporary file and a rename. A game that saves settings on exit loses them whenever it crashes, and the moment a game is most likely to crash is while it is shutting down.
-
-`user://` on the web is an IndexedDB mirror, so every write path flushes it; a removal is a write too.
-
-## Unknown keys are kept
-
-Not sloppiness. It is the downgrade path. A player who runs a newer build, changes a setting it added and goes back to an older one would otherwise lose it silently, and lose it again every single time. The unknown half is stored beside the known half and written back untouched.
-
-A hand-edited file loses **one line**, not all of them: a value out of range is corrected, a value that cannot be read at all falls back to the default, and the two are reported in separate lists because they are different things to tell a player.
-
-## Using it
-
-```gdscript
 var settings := DotSettingsManager.new()
-settings.schema = my_schema
+settings.schema = schema
 settings.local_store = DotSettingsStoreFile.new()
 settings.app_namespace = &"my_game"
 settings.shared_namespace = &"tmc_account"      # optional
@@ -73,19 +28,55 @@ add_child(settings)
 settings.setup()
 
 settings.get_float(&"master_volume")
-settings.set_value(&"master_volume", 0.4)       # saved, debounced, atomically
+settings.set_value(&"master_volume", 0.4)       # saved shortly after, atomically
 ```
 
-`DotSettingsStore` is three methods. A file store and a memory store ship; an account store is an HTTP client against somebody's backbone, and whose backbone it is, is not this asset's decision.
+A key binding is stored as readable text (`"Y"`, `"Shift+A"`, `"Mouse 1"`), not a keycode, so the file means the same on every keyboard layout. dot-ui's `DotInputBinding` converts it to and from an `InputEvent`.
 
-## Installing
+## Scopes
 
-Copy `addons/dot_settings/` and [`dot-core`](https://github.com/modcommunity/dot-core)'s `addons/dot_core/` into your project and enable dot-settings in **Project → Project Settings → Plugins**.
+| Scope | For | Behaviour |
+| --- | --- | --- |
+| `DEVICE` | Resolution, audio device, thread count | Never synchronised, so switching machines does not break it. |
+| `ACCOUNT` | Sensitivity, crosshair, subtitles, language | Stored under `shared_namespace`. Games that use the same name share the value; others are unaffected. |
+| `SERVER_CLAMPED` | Field of view, view models, third person | A server may cap it. |
 
-## Dependencies
+## Server clamps
 
-[dot-core](https://github.com/modcommunity/dot-core). Nothing else.
+A server can cap a setting but can never read one: asking clients for key bindings, audio device or resolution would build a fingerprint that survives new accounts and bans, so this addon has no read direction at all.
 
-## Licence
+A clamp is a bound, not a value. What is saved is the player's choice.
 
-MIT. See [LICENSE](LICENSE).
+```gdscript
+settings.apply_server_clamps({"fov": 90})
+settings.get_value(&"fov")      # 90 for a player who wanted 110
+settings.chosen_value(&"fov")   # 110, what the screen shows
+```
+
+## Settings screen
+
+`DotSettingsManager.to_config()` returns a `DotConfig` whose properties are the schema's keys. dot-ui builds a panel from any `DotConfig`, so you do not write one.
+
+## Saving
+
+| Behaviour | Why |
+| --- | --- |
+| Written on change, debounced | Dragging a slider is one write, and a crash loses nothing. |
+| Atomic (temporary file, then rename) | A crash mid-write cannot corrupt the file. |
+| Web builds flush the IndexedDB mirror after every write, removals included | `user://` on the web is only a mirror. |
+| Unknown keys are kept and written back | Going back to an older build does not lose settings a newer one added. |
+| A bad hand-edit loses one line | An out-of-range value is corrected, an unreadable one falls back to the default, and the two are reported separately. |
+
+## Stores
+
+`DotSettingsStore` has three methods. A file store and a memory store ship. An account store is an HTTP client against whichever back end you use; this addon does not choose it for you.
+
+## Testing
+
+Import the project once, then run the self-test scene in `examples/` headless with Godot. Design notes: [docs/design.md](docs/design.md).
+
+## Status and licence
+
+Part of the TMC **dot-\*** family of Godot addons. Written with Claude Code and maintained by `gamemann`. Every addon has headless tests, but little of this has been played by real users yet, so expect rough edges and please [open an issue](https://github.com/modcommunity/dot-settings/issues) when you hit one.
+
+MIT licence, see [LICENSE](LICENSE). The only closed part of the TMC platform is the web back end; you can use your own instead of TMC's.
