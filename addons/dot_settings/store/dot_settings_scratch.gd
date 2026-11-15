@@ -1,13 +1,9 @@
 class_name DotSettingsScratch
 extends RefCounted
 
-## A settings directory of this process alone, for a suite or a render.
-##
-## [code]user://[/code] is shared by every run on the machine. A suite that wrote the
-## player's real directory, or one shared scratch directory, had a concurrent run wipe or
-## rewrite it under it: keys re-bound and values reset in the other run. One directory per
-## process ([code]user://scratch/<tag>_<pid>[/code]) cannot collide, and the directories of
-## processes that have exited are swept on the next use.
+## A settings directory of this process alone, for a suite or a render. [code]user://[/code] is shared by every run on the machine, and a
+## suite writing the player's real directory or one shared scratch directory had a concurrent run re-bind keys and reset values under it.
+## One directory per process ([code]user://scratch/<tag>_<pid>[/code]) cannot collide; those of exited processes are swept on the next use.
 
 ## Where the scratch directories live.
 const ROOT := "user://scratch"
