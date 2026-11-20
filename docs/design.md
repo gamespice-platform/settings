@@ -1,6 +1,6 @@
 # Design
 
-Why dot-settings is shaped the way it is, and why the obvious alternative is wrong in each case.
+Why GameSpice Settings is shaped the way it is, and why the obvious alternative is wrong in each case.
 
 ## Why this exists
 
@@ -8,7 +8,7 @@ A `DotConfig` is a deployment's configuration: layered from defaults, a file, th
 
 ## `DotSettingsConfig`: a `DotConfig` built from a schema
 
-`DotSettingsConfig` is the bridge and the interesting part of the addon: a `DotConfig` whose properties are a schema's keys, built at runtime. dot-ui generates a settings panel from any `DotConfig` by reflection, so handing one over means **a new setting appears on a screen with nobody editing a screen**, and this addon still does not know a `Control` exists.
+`DotSettingsConfig` is the bridge and the interesting part of the addon: a `DotConfig` whose properties are a schema's keys, built at runtime. GameSpice UI generates a settings panel from any `DotConfig` by reflection, so handing one over means **a new setting appears on a screen with nobody editing a screen**, and this addon still does not know a `Control` exists.
 
 The obvious spelling does not work: **Godot refuses a dynamic property on an `Object`**. Assigning `cfg.some_new_key = 1` pushes an error and sets nothing. `_get_property_list` / `_get` / `_set` is the supported way, and the properties are then real to every reflective caller, including `DotConfig`'s own `config_keys()`.
 
@@ -74,15 +74,15 @@ The `defaults` section is neither a setting nor an unknown key: unknown keys are
 
 ## Bindings are opaque text
 
-`DotSettingsDef.binding(key, default, category)` declares a key binding as a setting, bounded at 32 characters: long enough for `"Shift+Kp Subtract"` and nothing like long enough to be a payload. dot-menu's key table declares its rows this way.
+`DotSettingsDef.binding(key, default, category)` declares a key binding as a setting, bounded at 32 characters: long enough for `"Shift+Kp Subtract"` and nothing like long enough to be a payload. GameSpice Menu's key table declares its rows this way.
 
-**The value stays opaque here, and that is the seam.** dot-settings does not depend on dot-ui and has no opinion about what a key is called; dot-ui's `DotInputBinding` reads and writes the text. What this addon guarantees is what it guarantees for any string: the setting is declared, bounded, scoped and enumerable.
+**The value stays opaque here, and that is the seam.** GameSpice Settings does not depend on GameSpice UI and has no opinion about what a key is called; GameSpice UI's `DotInputBinding` reads and writes the text. What this addon guarantees is what it guarantees for any string: the setting is declared, bounded, scoped and enumerable.
 
 Text rather than a keycode because a settings document is written to disk, may be synchronised to an account, and is hand-edited. `"Y"` survives all three; `89` survives none of them, and is also a number that means a different key on a different layout.
 
 ## Deliberately not here
 
 - **An account store.** It is an HTTP client against somebody's backbone, and whose backbone it is, is not this addon's decision. `remote_store` takes any subclass.
-- **A settings screen.** dot-ui generates one from the `DotConfig`. Shipping a second would be two screens to keep in step.
-- **Key binding storage beyond a string.** dot-ui has the rebinder and the conflict detection; this stores what it produces.
+- **A settings screen.** GameSpice UI generates one from the `DotConfig`. Shipping a second would be two screens to keep in step.
+- **Key binding storage beyond a string.** GameSpice UI has the rebinder and the conflict detection; this stores what it produces.
 - **Cloud conflict resolution.** Two machines that both changed the same account setting while offline is a real problem and a bigger one than this; the manager's stamps make it newest-choice-wins per key, which is only as good as the two machines' clocks agree, and the addon says so rather than pretending to more.

@@ -3,12 +3,12 @@ extends DotConfig
 
 ## A [DotConfig] whose properties are a [DotSettingsSchema]'s keys, built at runtime.
 ##
-## [b]This exists so that "integrates with dot-ui" costs this addon no dependency at
-## all.[/b] dot-ui's settings panel is generated from any [DotConfig] by reflection, and
+## [b]This exists so that "integrates with GameSpice UI" costs this addon no dependency at
+## all.[/b] GameSpice UI's settings panel is generated from any [DotConfig] by reflection, and
 ## [DotConfig] itself discovers its keys through [method Object.get_property_list]. So a
 ## config that answers [method Object._get_property_list] with a schema's keys is a
 ## settings screen, a layered configuration and a console's completion source at once —
-## and nothing here names a [Control], a [Theme] or dot-ui.
+## and nothing here names a [Control], a [Theme] or GameSpice UI.
 ##
 ## [b]The mechanism matters, because the obvious spelling does not work.[/b] Godot refuses
 ## a dynamic property on an [Object]: assigning [code]cfg.some_new_key = 1[/code] pushes

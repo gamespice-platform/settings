@@ -5,9 +5,9 @@ Game settings as a validated document: declare each setting once, scope it to a 
 ## Install
 
 1. Get [Godot 4.7](https://godotengine.org/download).
-2. Either use [dot-bootstrap](https://github.com/gamespice-platform/bootstrap), which clones every project and links the addons, or copy `addons/dot_settings/` and [dot-core](https://github.com/gamespice-platform/core)'s `addons/dot_core/` into your project and enable dot-settings in *Project > Project Settings > Plugins*.
+2. Either use [GameSpice Bootstrap](https://github.com/gamespice-platform/bootstrap), which clones every project and links the addons, or copy `addons/dot_settings/` and [GameSpice Core](https://github.com/gamespice-platform/core)'s `addons/dot_core/` into your project and enable dot-settings in *Project > Project Settings > Plugins*.
 
-dot-core is the only dependency.
+GameSpice Core is the only dependency.
 
 ## Use
 
@@ -31,7 +31,7 @@ settings.get_float(&"master_volume")
 settings.set_value(&"master_volume", 0.4)       # saved shortly after, atomically
 ```
 
-A key binding is stored as readable text (`"Y"`, `"Shift+A"`, `"Mouse 1"`), not a keycode, so the file means the same on every keyboard layout. dot-ui's `DotInputBinding` converts it to and from an `InputEvent`.
+A key binding is stored as readable text (`"Y"`, `"Shift+A"`, `"Mouse 1"`), not a keycode, so the file means the same on every keyboard layout. GameSpice UI's `DotInputBinding` converts it to and from an `InputEvent`.
 
 ## Scopes
 
@@ -55,7 +55,7 @@ settings.chosen_value(&"fov")   # 110, what the screen shows
 
 ## Settings screen
 
-`DotSettingsManager.to_config()` returns a `DotConfig` whose properties are the schema's keys. dot-ui builds a panel from any `DotConfig`, so you do not write one.
+`DotSettingsManager.to_config()` returns a `DotConfig` whose properties are the schema's keys. GameSpice UI builds a panel from any `DotConfig`, so you do not write one.
 
 ## Saving
 

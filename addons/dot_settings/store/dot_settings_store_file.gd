@@ -18,7 +18,7 @@ extends DotSettingsStore
 ##
 ## [b]3. The filename is sanitised with an explicit alphabet.[/b] Not
 ## [method String.is_valid_ascii_identifier], which is false for a digit — it answers "may
-## this begin an identifier". dot-timer replaced every digit in a map id with an
+## this begin an identifier". GameSpice Timer replaced every digit in a map id with an
 ## underscore that way, and two maps whose names differed only by a trailing number shared
 ## one records file.
 

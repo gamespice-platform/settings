@@ -17,7 +17,7 @@ extends Resource
 
 ## How large a stored document may be, in keys.
 ##
-## Bounded for the reason dot-loadout and dot-user-avatar are: a document that travels is
+## Bounded for the reason GameSpice Loadout and GameSpice User Avatar are: a document that travels is
 ## a document somebody will try to make enormous, and "the server ran out of memory" is a
 ## worse answer than "that is too many keys".
 @export_range(1, 100000, 1) var max_keys: int = 512
@@ -163,7 +163,7 @@ func coerce_document(raw: Dictionary) -> Dictionary:
 ##
 ## [b]This is the anti-duplication path and it is the one most existing code wants.[/b]
 ## Several projects in this family already have a [DotConfig] full of player-facing
-## settings — a volume, a camera follow time, whether to show names — which dot-ui already
+## settings — a volume, a camera follow time, whether to show names — which GameSpice UI already
 ## generates a panel from. Writing a schema beside one would be two copies of one list, and
 ## this tree's most repeated bug is a list that went stale.
 ##
@@ -285,7 +285,7 @@ func apply_to_config(config: DotConfig, values: Dictionary) -> PackedStringArray
 
 ## A [DotConfig] carrying this schema's current values.
 ##
-## [b]This is the whole of "integrates with dot-ui".[/b] dot-ui's settings panel is
+## [b]This is the whole of "integrates with GameSpice UI".[/b] GameSpice UI's settings panel is
 ## generated from any [DotConfig], so handing one over means a new setting appears on a
 ## screen with nobody editing a screen — and this addon still does not know a [Control]
 ## exists.

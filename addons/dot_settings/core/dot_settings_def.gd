@@ -11,7 +11,7 @@ extends Resource
 ## second copy of the list. This family has shipped "two copies of one list" five times
 ## and it is the bug it guards hardest against.
 ##
-## The declaration is also the whole of the user interface. dot-ui's settings panel is
+## The declaration is also the whole of the user interface. GameSpice UI's settings panel is
 ## generated from a [DotConfig]; a [DotSettingsSchema] hands one over for exactly that
 ## reason, so a new setting appears on screen without anybody editing a screen.
 
@@ -298,7 +298,7 @@ static func text(
 ## [code]"Y"[/code] survives all three; [code]89[/code] survives none of them, and is also
 ## a number that means a different key on a different layout.
 ##
-## This addon never interprets it. dot-settings does not depend on dot-ui and has no
+## This addon never interprets it. GameSpice Settings does not depend on GameSpice UI and has no
 ## opinion about input; what it guarantees is the same thing it guarantees for any string —
 ## that it is declared, bounded, scoped and enumerable.
 static func binding(

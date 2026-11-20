@@ -62,7 +62,7 @@ func _test_defs() -> void:
 		bind.category == &"controls",
 		"under controls by default, because that is the screen it belongs on"
 	)
-	# Opaque here on purpose: dot-settings does not depend on dot-ui and has no opinion
+	# Opaque here on purpose: GameSpice Settings does not depend on GameSpice UI and has no opinion
 	# about what a key is called. What it guarantees is that the value is bounded.
 	_check(
 		str(bind.coerce("x".repeat(200)).value).length() == bind.max_length,

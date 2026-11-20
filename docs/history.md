@@ -8,7 +8,7 @@ Bugs worth recognising if they come back. The lessons that still apply are rules
 
 Two things came out of it, both family-wide now:
 
-1. **`DotValue` is in dot-core**, with a self-test. dot-npc-ai's blackboard had this exact bug (`get_value(...) != MISSING` answered false for every value that was not a `StringName`), so it was the second time, and the class is the family's answer. Use it anywhere either side is a `Variant` whose type you do not control.
+1. **`DotValue` is in GameSpice Core**, with a self-test. GameSpice NPC AI's blackboard had this exact bug (`get_value(...) != MISSING` answered false for every value that was not a `StringName`), so it was the second time, and the class is the family's answer. Use it anywhere either side is a `Variant` whose type you do not control.
 2. **Every suite asserts a total number of checks, not just a section count.** The section counter cannot catch this: the section had already announced itself before it aborted. See [docs/testing.md](../../../docs/testing.md).
 
 ## A dynamic property that set nothing

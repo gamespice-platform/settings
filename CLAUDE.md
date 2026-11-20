@@ -1,10 +1,10 @@
-# dot-settings
+# GameSpice Settings
 
-A player's settings as a bounded document, with three scopes (device, account, server-clamped) and a server that may clamp but never read. `DotSettingsConfig` turns a schema into a `DotConfig`, so dot-ui draws the screen.
+A player's settings as a bounded document, with three scopes (device, account, server-clamped) and a server that may clamp but never read. `DotSettingsConfig` turns a schema into a `DotConfig`, so GameSpice UI draws the screen.
 
 Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is specific to settings.
 
-**The distributable is `addons/dot_settings/`.** It requires [dot-core](../dot-core) and nothing else (`ln -s ../../dot-core/addons/dot_core addons/dot_core`, gitignored). It names nothing from dot-ui; dot-menu builds on it.
+**The distributable is `addons/dot_settings/`.** It requires [GameSpice Core](../dot-core) and nothing else (`ln -s ../../dot-core/addons/dot_core addons/dot_core`, gitignored). It names nothing from dot-ui; dot-menu builds on it.
 
 ## Read before
 
@@ -19,7 +19,7 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 | --- | --- |
 | `core/dot_settings_def.gd` | `DotSettingsDef`: one setting; kind, scope, bounds, coercion; `binding()` |
 | `core/dot_settings_schema.gd` | `DotSettingsSchema`: all of them, a version, the migrations. The only list. `from_config`, `apply_to_config` |
-| `core/dot_settings_config.gd` | `DotSettingsConfig`: a `DotConfig` built from a schema at runtime; the dot-ui bridge |
+| `core/dot_settings_config.gd` | `DotSettingsConfig`: a `DotConfig` built from a schema at runtime; the GameSpice UI bridge |
 | `core/dot_settings_policy.gd` | `DotSettingsPolicy`: what a server may touch; a `DotConfig` |
 | `store/dot_settings_store.gd` | `DotSettingsStore`: three methods; a missing document is a success |
 | `store/dot_settings_store_file.gd` | `DotSettingsStoreFile`: atomic JSON under `user://`, flushed for the web |

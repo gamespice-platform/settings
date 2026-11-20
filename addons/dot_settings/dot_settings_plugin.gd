@@ -1,7 +1,7 @@
 @tool
 extends EditorPlugin
 
-## Editor entry point for dot-settings. Registers inspector types only.
+## Editor entry point for GameSpice Settings. Registers inspector types only.
 ##
 ## No autoloads: a launcher and the game it launches are two settings managers in one
 ## process, on two different namespaces, and a global would make them one.

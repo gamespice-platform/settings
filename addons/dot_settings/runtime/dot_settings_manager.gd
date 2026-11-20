@@ -89,7 +89,7 @@ signal saved(res: DotResult)
 ## Who these settings belong to. A pseudonymous id, or [code]&"local"[/code].
 ##
 ## [b]Not an account id, and never a display name.[/b] It is part of a filename, and a
-## filename derived from a name changes when the name does. dot-user's per-scope
+## filename derived from a name changes when the name does. GameSpice User's per-scope
 ## pseudonymous id is the right thing to pass.
 @export var profile: StringName = &"local"
 
@@ -674,7 +674,7 @@ func _default_of(key: StringName) -> Variant:
 	return def.default_value if def != null else null
 
 
-# --- dot-ui, without knowing dot-ui exists ----------------------------------
+# --- GameSpice UI, without knowing GameSpice UI exists ----------------------------------
 
 ## A [DotConfig] a generated settings panel can be pointed at.
 ##

@@ -5,7 +5,7 @@ extends DotConfig
 ## What a server is allowed to do to a player's settings.
 ##
 ## [b]A server may clamp, and may never read.[/b] That asymmetry is the whole class, and
-## it is the same reasoning dot-spectate's force-camera policy runs on: capping field of
+## it is the same reasoning GameSpice Spectate's force-camera policy runs on: capping field of
 ## view is a legitimate competitive rule, and asking a client to report its key bindings,
 ## its audio device or its screen resolution is a fingerprint — a stable identifier
 ## assembled from settings, which survives a new account and every ban a moderator issues.
