@@ -37,7 +37,7 @@ func values() -> Dictionary:
 
 
 func env_prefix() -> String:
-	return "DOT_SETTING_"
+	return "GS_SETTING_"
 
 
 func cli_prefix() -> String:

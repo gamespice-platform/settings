@@ -16,7 +16,7 @@ The obvious spelling does not work: **Godot refuses a dynamic property on an `Ob
 
 ## `from_config`, the path most existing code wants
 
-Several projects already have a `GSConfig` full of player-facing settings, and dot-ui already generates a panel from one. Writing a schema beside such a config would be **two copies of one list**, this tree's most repeated bug.
+Several projects already have a `GSConfig` full of player-facing settings, and gs-ui already generates a panel from one. Writing a schema beside such a config would be **two copies of one list**, this tree's most repeated bug.
 
 `GSSettingsSchema.from_config(cfg, scopes)` reads it instead. Ranges come from `@export_range`, options from `@export_enum`, and anything in `sensitive_keys()` becomes `private`. What a config cannot say is the scope (which keys follow a person and which a server may clamp), so that arrives as a dictionary and nothing else is repeated.
 

@@ -47,7 +47,7 @@ extends GSConfig
 
 
 func env_prefix() -> String:
-	return "DOT_SETTINGS_POLICY_"
+	return "GS_SETTINGS_POLICY_"
 
 
 ## Whether [param key] may be clamped by a server.

@@ -10,7 +10,7 @@ config_version=5
 
 [application]
 
-config/name="dot-settings"
+config/name="gs-settings"
 config/description="Client settings as a bounded, validated document: declared once, scoped to a device, an account or a server, stored through a pluggable store, and shared between games on purpose."
 run/main_scene="res://examples/settings_selftest.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
@@ -23,7 +23,7 @@ window/size/viewport_height=900
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/dot_settings/plugin.cfg")
+enabled=PackedStringArray("res://addons/gs_settings/plugin.cfg")
 
 [importer_defaults]
 

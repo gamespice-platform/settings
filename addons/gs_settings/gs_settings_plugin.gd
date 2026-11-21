@@ -6,13 +6,13 @@ extends EditorPlugin
 ## No autoloads: a launcher and the game it launches are two settings managers in one
 ## process, on two different namespaces, and a global would make them one.
 
-const _ICON := "res://addons/dot_settings/icon_placeholder.svg"
+const _ICON := "res://addons/gs_settings/icon_placeholder.svg"
 
 const _TYPES := [
 	[
 		"GSSettingsManager",
 		"Node",
-		"res://addons/dot_settings/runtime/dot_settings_manager.gd",
+		"res://addons/gs_settings/runtime/gs_settings_manager.gd",
 	],
 ]
 

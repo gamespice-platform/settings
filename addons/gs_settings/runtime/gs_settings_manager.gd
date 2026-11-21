@@ -40,7 +40,7 @@ extends Node
 ## that has been running for an hour does not write back the sensitivity another game
 ## changed ten minutes ago.
 
-const SERVICE := &"dot_settings"
+const SERVICE := &"gs_settings"
 const CHANNEL := "settings"
 
 ## The document's record of the default each value was saved under.
@@ -715,7 +715,7 @@ func describe() -> Dictionary:
 
 func describe_lines() -> PackedStringArray:
 	var out := PackedStringArray()
-	out.append("dot-settings  %s/%s" % [app_namespace, profile])
+	out.append("gs-settings  %s/%s" % [app_namespace, profile])
 	out.append("  store    %s%s" % [
 		local_store.store_name() if local_store != null else "none",
 		"" if persist else "  (not persisted)",

@@ -1,6 +1,6 @@
 extends "settings_selftest_base.gd"
 
-## Exercises dot-settings with no screen, no server and no disk except its own.
+## Exercises gs-settings with no screen, no server and no disk except its own.
 ##
 ## The interesting checks are the ones about what a settings system does when something
 ## is wrong: a hand-edited file with one bad line, a build that is older than the document
@@ -26,7 +26,7 @@ func _ready() -> void:
 
 
 func _run() -> void:
-	_line("dot-settings self-test")
+	_line("gs-settings self-test")
 	_line("")
 
 	_test_defs()
@@ -728,7 +728,7 @@ class ExampleGameConfig:
 	extends GSConfig
 
 	## A stand-in for the kind of GSConfig several games in this family already have:
-	## player-facing settings that dot-ui already generates a panel from.
+	## player-facing settings that gs-ui already generates a panel from.
 
 	@export_range(0.0, 1.0, 0.01) var volume: float = 0.8
 	@export_range(0.05, 20.0, 0.05) var sensitivity: float = 2.5

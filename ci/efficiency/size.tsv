@@ -1,5 +1,5 @@
 # size
 # Baselines only shrink: scripts/<gate> --update lowers or drops entries and refuses to add.
-addons/dot_settings/runtime/dot_settings_manager.gd::load_now	96
+addons/gs_settings/runtime/gs_settings_manager.gd::load_now	96
 examples/settings_selftest.gd::_test_account_precedence	147
 examples/settings_selftest.gd::_test_clamps	107
