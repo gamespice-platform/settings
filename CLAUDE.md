@@ -4,7 +4,7 @@ A player's settings as a bounded document, with three scopes (device, account, s
 
 Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is specific to settings.
 
-**The distributable is `addons/dot_settings/`.** It requires [GameSpice Core](../dot-core) and nothing else (`ln -s ../../dot-core/addons/dot_core addons/dot_core`, gitignored). It names nothing from dot-ui; dot-menu builds on it.
+**The distributable is `addons/dot_settings/`.** It requires [GameSpice Core](../dot-core) and [GameSpice Save](../dot-save) (`ln -s ../../dot-save/addons/dot_save addons/dot_save`, gitignored; the file store lives there) (`ln -s ../../dot-core/addons/dot_core addons/dot_core`, gitignored). It names nothing from dot-ui; dot-menu builds on it.
 
 ## Read before
 

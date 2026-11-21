@@ -6,15 +6,14 @@ extends DotSettingsStore
 ## Three details are load-bearing and each one is a bug this family has already paid for
 ## somewhere:
 ##
-## [b]1. The write is atomic.[/b] [method DotPaths.write_json] writes a temporary file and
+## [b]1. The write is atomic.[/b] [DotSaveStoreFile] writes a temporary file and
 ## renames it. A settings file truncated by a crash mid-write is a player who lost every
 ## setting, and the moment a game is most likely to crash is while it is shutting down —
 ## which is exactly when the naive implementation writes.
 ##
 ## [b]2. [code]user://[/code] on the web is an IndexedDB mirror.[/b] It needs an explicit
-## flush or the write is in memory only and is gone when the tab closes. [method
-## DotPaths.replace_file] calls [method DotWeb.sync_filesystem] for us, and this store
-## calls it again after a clear, because a removal is a write too.
+## flush or the write is in memory only and is gone when the tab closes. [DotSaveStoreFile]
+## calls [method DotWeb.sync_filesystem] for us, after a write, a removal and a set-aside alike.
 ##
 ## [b]3. The filename is sanitised with an explicit alphabet.[/b] Not
 ## [method String.is_valid_ascii_identifier], which is false for a digit — it answers "may
@@ -28,16 +27,30 @@ const CHANNEL := "settings"
 var directory: String = "user://settings"
 
 var _last_error: String = ""
+var _files: DotSaveStoreFile
 
 
 func _init(p_directory: String = "user://settings") -> void:
 	directory = p_directory
 
 
+## The file store under this one. Names are made safe by [method _safe] before they get here, so no key rule is added; an unreadable file is kept aside as `.broken`.
+func files() -> DotSaveStoreFile:
+	if _files == null:
+		_files = DotSaveStoreFile.new()
+		_files.suffix = ".json"
+		_files.aside_suffix = ".broken"
+		_files.key_check = func(key: String) -> bool: return not key.is_empty()
+	_files.directory = directory.rstrip("/")
+	return _files
+
+
+func _key(app_namespace: StringName, profile: StringName) -> String:
+	return "%s.%s" % [_safe(String(app_namespace)), _safe(String(profile))]
+
+
 func _path(app_namespace: StringName, profile: StringName) -> String:
-	return "%s/%s.%s.json" % [
-		directory.rstrip("/"), _safe(String(app_namespace)), _safe(String(profile))
-	]
+	return files().path_for(_key(app_namespace, profile))
 
 
 ## Reduces a name to something that is a filename on every platform this family targets.
@@ -75,11 +88,7 @@ func load_document(app_namespace: StringName, profile: StringName) -> DotResult:
 		# and being unable to show anybody what was in it.
 		_last_error = res.error.message
 		var salvage := path + ".broken"
-		var dir := DirAccess.open(directory)
-		if dir != null:
-			dir.remove(salvage)
-			dir.rename(path, salvage)
-			DotWeb.sync_filesystem()
+		files().set_aside(_key(app_namespace, profile))
 		DotLog.warn(
 			CHANNEL,
 			"settings file unreadable, kept aside and starting from defaults",
@@ -96,7 +105,7 @@ func load_document(app_namespace: StringName, profile: StringName) -> DotResult:
 func save_document(
 	app_namespace: StringName, profile: StringName, document: Dictionary
 ) -> DotResult:
-	var res := DotPaths.write_json(_path(app_namespace, profile), document, true, true)
+	var res := files().write(_key(app_namespace, profile), JSON.stringify(document, "\t"))
 	if not res.ok:
 		_last_error = res.error.message
 		return res.wrap("saving settings")
@@ -107,17 +116,9 @@ func clear_document(app_namespace: StringName, profile: StringName) -> DotResult
 	var path := _path(app_namespace, profile)
 	if not FileAccess.file_exists(path):
 		return DotResult.success(null)
-	var dir := DirAccess.open(path.get_base_dir())
-	if dir == null:
-		return DotResult.failure(
-			DotError.from_engine(DirAccess.get_open_error(), "opening the settings directory")
-		)
-	var err := dir.remove(path)
-	if err != OK:
-		return DotResult.failure(DotError.from_engine(err, "removing '%s'" % path))
-	# A removal is a write, and on the web an unflushed removal comes back on the next
-	# load.
-	DotWeb.sync_filesystem()
+	var res := files().remove(_key(app_namespace, profile))
+	if not res.ok:
+		return res
 	return DotResult.success(null)
 
 

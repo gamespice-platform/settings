@@ -7,7 +7,7 @@ Game settings as a validated document: declare each setting once, scope it to a 
 1. Get [Godot 4.7](https://godotengine.org/download).
 2. Either use [GameSpice Bootstrap](https://github.com/gamespice-platform/bootstrap), which clones every project and links the addons, or copy `addons/dot_settings/` and [GameSpice Core](https://github.com/gamespice-platform/core)'s `addons/dot_core/` into your project and enable dot-settings in *Project > Project Settings > Plugins*.
 
-GameSpice Core is the only dependency.
+GameSpice Core and [GameSpice Save](https://github.com/gamespice-platform/save) (copy its `addons/dot_save/` beside `dot_core`) are the dependencies.
 
 ## Use
 
