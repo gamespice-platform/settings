@@ -21,7 +21,7 @@ const CHECKS := 134
 
 
 func _ready() -> void:
-	DotLog.set_level(DotLog.Level.ERROR)
+	GSLog.set_level(GSLog.Level.ERROR)
 	_run()
 
 
@@ -75,14 +75,14 @@ func _run() -> void:
 func _test_manager() -> void:
 	_section("The manager a game holds")
 
-	var m := DotSettingsManager.new()
+	var m := GSSettingsManager.new()
 	m.schema = _schema()
-	m.local_store = DotSettingsStoreMemory.new()
+	m.local_store = GSSettingsStoreMemory.new()
 	m.app_namespace = &"selftest"
 	m.persist = false
 	add_child(m)
 	_check(m.setup().ok, "the manager sets up")
-	_check(DotRegistry.has(DotSettingsManager.SERVICE), "and publishes itself")
+	_check(GSRegistry.has(GSSettingsManager.SERVICE), "and publishes itself")
 
 	_check(is_equal_approx(m.get_float(&"master_volume"), 0.8), "an unset value is the default")
 
@@ -108,7 +108,7 @@ func _test_manager() -> void:
 
 	_check(m.describe_lines().size() > 4, "and it describes itself")
 
-	# `DotSettingsDef.requires_restart` was declared, documented and read by nothing: a
+	# `GSSettingsDef.requires_restart` was declared, documented and read by nothing: a
 	# game holds a manager and never a def, so nothing could answer "does what I just
 	# changed take effect now". The detector that finds this is not the once-only grep --
 	# the name occurred three times -- but the one beside it: a public surface on the inner
@@ -141,10 +141,10 @@ func _test_manager() -> void:
 func _test_persistence() -> void:
 	_section("Written on change, and an account is a second document")
 
-	var store := DotSettingsStoreMemory.new()
-	var account := DotSettingsStoreMemory.new()
+	var store := GSSettingsStoreMemory.new()
+	var account := GSSettingsStoreMemory.new()
 
-	var m := DotSettingsManager.new()
+	var m := GSSettingsManager.new()
 	m.schema = _schema()
 	m.local_store = store
 	m.remote_store = account
@@ -161,9 +161,9 @@ func _test_persistence() -> void:
 	_check(account.count() == 1, "and the account's is a second document, not a merge")
 
 	# The whole point of a shared namespace: a different game, the same person.
-	var other := DotSettingsManager.new()
+	var other := GSSettingsManager.new()
 	other.schema = _schema()
-	other.local_store = DotSettingsStoreMemory.new()
+	other.local_store = GSSettingsStoreMemory.new()
 	other.remote_store = account
 	other.app_namespace = &"game_two"
 	other.shared_namespace = &"tmc_account"
@@ -180,19 +180,19 @@ func _test_persistence() -> void:
 		"and does not read the device-scoped one, which is the whole point of the scopes"
 	)
 
-	var read_only := DotSettingsManager.new()
+	var read_only := GSSettingsManager.new()
 	read_only.schema = _schema()
-	read_only.local_store = DotSettingsStoreMemory.new(true)
+	read_only.local_store = GSSettingsStoreMemory.new(true)
 	read_only.register_as_service = false
 	add_child(read_only)
 	read_only.setup()
 	var refusals := []
-	read_only.saved.connect(func(r: DotResult) -> void: refusals.append(r))
+	read_only.saved.connect(func(r: GSResult) -> void: refusals.append(r))
 	read_only.set_value(&"fov", 100)
 	var res := read_only.flush()
 	_check(not res.ok, "a store that cannot be written to says so")
 	_check(
-		res.code() == DotError.CODE_FORBIDDEN,
+		res.code() == GSError.CODE_FORBIDDEN,
 		"with a code a game can turn into 'your settings will not be kept'"
 	)
 	_check(refusals.size() == 1, "and announces it, rather than failing silently on every change")
@@ -205,9 +205,9 @@ func _test_persistence() -> void:
 # --- 5b ---------------------------------------------------------------------
 
 func _account_game(
-	game: StringName, local: DotSettingsStore, account: DotSettingsStore, t: Array
-) -> DotSettingsManager:
-	var m := DotSettingsManager.new()
+	game: StringName, local: GSSettingsStore, account: GSSettingsStore, t: Array
+) -> GSSettingsManager:
+	var m := GSSettingsManager.new()
 	m.schema = _schema()
 	m.local_store = local
 	m.remote_store = account
@@ -229,9 +229,9 @@ func _test_account_precedence() -> void:
 	_section("Both documents hold an account setting, and the newer choice wins")
 
 	var t := [1_000_000]
-	var account := DotSettingsStoreMemory.new()
-	var one_store := DotSettingsStoreMemory.new()
-	var two_store := DotSettingsStoreMemory.new()
+	var account := GSSettingsStoreMemory.new()
+	var one_store := GSSettingsStoreMemory.new()
+	var two_store := GSSettingsStoreMemory.new()
 	var one := _account_game(&"game_one", one_store, account, t)
 	var two := _account_game(&"game_two", two_store, account, t)
 
@@ -292,15 +292,15 @@ func _test_account_precedence() -> void:
 		"while its own change in the same save stays"
 	)
 	_check(
-		acc.get(DotSettingsManager.ACCOUNT_STAMPS_KEY) is Dictionary,
+		acc.get(GSSettingsManager.ACCOUNT_STAMPS_KEY) is Dictionary,
 		"the account document records when each value was chosen"
 	)
 	_check(one.describe()["unknown"] == 0, "and neither record is kept as an unknown setting")
 
 	# Files written before stamps: the account document wins once, as the design always
 	# said, and the next save stamps both halves.
-	var old_local := DotSettingsStoreMemory.new()
-	var old_account := DotSettingsStoreMemory.new()
+	var old_local := GSSettingsStoreMemory.new()
+	var old_account := GSSettingsStoreMemory.new()
 	old_local.save_document(&"game_old", &"player_a", {
 		"version": 1, "values": {"sensitivity": 3.0, "master_volume": 0.5, "subtitles": true},
 	})
@@ -321,8 +321,8 @@ func _test_account_precedence() -> void:
 	var stamped: Dictionary = old_local.load_document(&"game_old", &"player_a").value
 	var acc2: Dictionary = old_account.load_document(&"tmc_account", &"player_a").value
 	_check(
-		stamped.get(DotSettingsManager.STAMPS_SECTION) is Dictionary
-		and acc2.get(DotSettingsManager.ACCOUNT_STAMPS_KEY) is Dictionary,
+		stamped.get(GSSettingsManager.STAMPS_SECTION) is Dictionary
+		and acc2.get(GSSettingsManager.ACCOUNT_STAMPS_KEY) is Dictionary,
 		"after which both documents carry stamps"
 	)
 
@@ -350,10 +350,10 @@ func _test_account_precedence() -> void:
 
 	# A file store, because JSON hands every stamp back as a float.
 	var dir := "user://selftest_account_%d" % Time.get_ticks_usec()
-	var f_local := DotSettingsStoreFile.new(dir)
-	var f_account := DotSettingsStoreFile.new(dir)
+	var f_local := GSSettingsStoreFile.new(dir)
+	var f_account := GSSettingsStoreFile.new(dir)
 	var fa := _account_game(&"file_one", f_local, f_account, t)
-	var fb_local := DotSettingsStoreFile.new(dir)
+	var fb_local := GSSettingsStoreFile.new(dir)
 	var fb := _account_game(&"file_two", fb_local, f_account, t)
 	t[0] += 1000
 	fb.set_value(&"sensitivity", 6.0)
@@ -379,14 +379,14 @@ func _test_account_precedence() -> void:
 func _test_migration() -> void:
 	_section("A document older than the build")
 
-	var store := DotSettingsStoreMemory.new()
+	var store := GSSettingsStoreMemory.new()
 	# Written by an imaginary version 1, which spelled the volume 0-100.
 	store.save_document(&"mig", &"p", {"version": 1, "values": {"master_volume": 60}})
 
 	var s := _schema()
 	s.version = 2
 
-	var m := DotSettingsManager.new()
+	var m := GSSettingsManager.new()
 	m.schema = s
 	m.local_store = store
 	m.app_namespace = &"mig"
@@ -409,9 +409,9 @@ func _test_migration() -> void:
 
 	# A document with no version at all is a document from before there were versions,
 	# which is version 1 by definition rather than an error.
-	var old := DotSettingsStoreMemory.new()
+	var old := GSSettingsStoreMemory.new()
 	old.save_document(&"mig", &"p", {"master_volume": 40})
-	var m2 := DotSettingsManager.new()
+	var m2 := GSSettingsManager.new()
 	m2.schema = s
 	m2.local_store = old
 	m2.app_namespace = &"mig"
@@ -432,17 +432,17 @@ func _test_migration() -> void:
 
 # --- 6b ---------------------------------------------------------------------
 
-func _keys_schema(heal_default: String) -> DotSettingsSchema:
-	var s := DotSettingsSchema.new()
-	s.add(DotSettingsDef.binding(&"bind_help", "H"))
-	s.add(DotSettingsDef.binding(&"bind_heal", heal_default).with_previous_defaults(["H"]))
-	s.add(DotSettingsDef.binding(&"bind_use", "E"))
-	s.add(DotSettingsDef.number(&"master_volume", 0.8, 0.0, 1.0, &"audio"))
+func _keys_schema(heal_default: String) -> GSSettingsSchema:
+	var s := GSSettingsSchema.new()
+	s.add(GSSettingsDef.binding(&"bind_help", "H"))
+	s.add(GSSettingsDef.binding(&"bind_heal", heal_default).with_previous_defaults(["H"]))
+	s.add(GSSettingsDef.binding(&"bind_use", "E"))
+	s.add(GSSettingsDef.number(&"master_volume", 0.8, 0.0, 1.0, &"audio"))
 	return s
 
 
-func _keys_manager(store: DotSettingsStore, s: DotSettingsSchema) -> DotSettingsManager:
-	var m := DotSettingsManager.new()
+func _keys_manager(store: GSSettingsStore, s: GSSettingsSchema) -> GSSettingsManager:
+	var m := GSSettingsManager.new()
 	m.schema = s
 	m.local_store = store
 	m.app_namespace = &"keys"
@@ -458,7 +458,7 @@ func _test_moved_defaults() -> void:
 
 	# A document from before documents recorded their defaults: the medkit on H, which was
 	# its default then; the use key on Q, which was a choice.
-	var store := DotSettingsStoreMemory.new()
+	var store := GSSettingsStoreMemory.new()
 	store.save_document(&"keys", &"p", {"version": 1, "values": {
 		"bind_help": "H", "bind_heal": "H", "bind_use": "Q", "master_volume": 0.8,
 	}})
@@ -496,9 +496,9 @@ func _test_moved_defaults() -> void:
 func _test_clamps() -> void:
 	_section("A server may clamp, and may never read")
 
-	var m := DotSettingsManager.new()
+	var m := GSSettingsManager.new()
 	m.schema = _schema()
-	m.local_store = DotSettingsStoreMemory.new()
+	m.local_store = GSSettingsStoreMemory.new()
 	m.persist = false
 	m.register_as_service = false
 	add_child(m)
@@ -538,11 +538,11 @@ func _test_clamps() -> void:
 	_check(int(m.get_value(&"fov")) == 115, "releasing the clamps gives the player theirs back")
 	_check(not m.is_clamped(&"fov"), "and nothing is clamped any more")
 
-	var strict := DotSettingsManager.new()
+	var strict := GSSettingsManager.new()
 	strict.schema = _schema()
-	strict.policy = DotSettingsPolicy.new()
+	strict.policy = GSSettingsPolicy.new()
 	strict.policy.accept_server_clamps = false
-	strict.local_store = DotSettingsStoreMemory.new()
+	strict.local_store = GSSettingsStoreMemory.new()
 	strict.persist = false
 	strict.register_as_service = false
 	add_child(strict)
@@ -554,7 +554,7 @@ func _test_clamps() -> void:
 
 	# THE CATEGORIES REACH THE GENERATED SCREEN, which they did not.
 	#
-	# `DotSettingsDef.category` has carried "Video", "Audio", "Gameplay" since the class was
+	# `GSSettingsDef.category` has carried "Video", "Audio", "Gameplay" since the class was
 	# written, and `_get_property_list` emitted no `PROPERTY_USAGE_GROUP` entry at all -- so
 	# every setting landed under one heading, and a generated screen came out with a single
 	# section called "Resource", the base class name. The panel drew perfectly and the
@@ -607,16 +607,16 @@ func _test_clamps() -> void:
 func _test_config_bridge() -> void:
 	_section("A settings screen, without knowing a screen exists")
 
-	var m := DotSettingsManager.new()
+	var m := GSSettingsManager.new()
 	m.schema = _schema()
-	m.local_store = DotSettingsStoreMemory.new()
+	m.local_store = GSSettingsStoreMemory.new()
 	m.persist = false
 	m.register_as_service = false
 	add_child(m)
 	m.setup()
 
 	var cfg := m.to_config()
-	# DotConfig discovers its keys by reflection, so a config that answers
+	# GSConfig discovers its keys by reflection, so a config that answers
 	# _get_property_list with a schema's keys is a generated settings panel -- and the
 	# obvious spelling, assigning a property that does not exist, is refused by Godot
 	# outright. This family shipped that once: a game descriptor that named no module.
@@ -650,18 +650,18 @@ func _test_config_bridge() -> void:
 func _test_scratch() -> void:
 	_section("A scratch settings directory of this process")
 
-	var dir := DotSettingsScratch.use("selftest_scratch")
-	_check(DotSettingsScratch.is_scratch(dir), "it lives under the scratch root")
+	var dir := GSSettingsScratch.use("selftest_scratch")
+	_check(GSSettingsScratch.is_scratch(dir), "it lives under the scratch root")
 	_check(dir.ends_with("_%d" % OS.get_process_id()), "and is this process's alone")
-	var store := DotSettingsStoreFile.new(dir)
+	var store := GSSettingsStoreFile.new(dir)
 	_check(store.save_document(&"app", &"local", {"version": 1, "values": {"a": 1}}).ok, "a store writes into it")
-	_check(DotSettingsScratch.use("selftest_scratch") == dir, "using it again names the same directory")
-	_check(DotSettingsStoreFile.new(dir).load_document(&"app", &"local").value.is_empty(), "and empties it")
+	_check(GSSettingsScratch.use("selftest_scratch") == dir, "using it again names the same directory")
+	_check(GSSettingsStoreFile.new(dir).load_document(&"app", &"local").value.is_empty(), "and empties it")
 
 	# A dead process's directory is swept; a live one's is not.
-	var dead := ProjectSettings.globalize_path(DotSettingsScratch.ROOT).path_join("selftest_scratch_2147483646")
+	var dead := ProjectSettings.globalize_path(GSSettingsScratch.ROOT).path_join("selftest_scratch_2147483646")
 	var _made := DirAccess.make_dir_recursive_absolute(dead)
-	DotSettingsScratch.sweep_dead()
+	GSSettingsScratch.sweep_dead()
 	_check(not DirAccess.dir_exists_absolute(dead), "the directory of a process that has exited is swept")
 	var _gone := DirAccess.remove_absolute(ProjectSettings.globalize_path(dir))
 
@@ -670,16 +670,16 @@ func _test_from_an_existing_config() -> void:
 	_section("A schema read out of a config that already existed")
 
 	var cfg := ExampleGameConfig.new()
-	var schema := DotSettingsSchema.from_config(cfg, {
-		&"sensitivity": DotSettingsDef.Scope.ACCOUNT,
-		&"field_of_view": DotSettingsDef.Scope.SERVER_CLAMPED,
+	var schema := GSSettingsSchema.from_config(cfg, {
+		&"sensitivity": GSSettingsDef.Scope.ACCOUNT,
+		&"field_of_view": GSSettingsDef.Scope.SERVER_CLAMPED,
 	})
 
 	_check(schema.validate().ok, "the derived schema validates")
 	_check(schema.keys().size() == 5, "with one entry per config key (%d)" % schema.keys().size())
 
 	var vol := schema.find(&"volume")
-	_check(vol != null and vol.kind == DotSettingsDef.Kind.FLOAT, "a float stays a float")
+	_check(vol != null and vol.kind == GSSettingsDef.Kind.FLOAT, "a float stays a float")
 	_check(
 		is_equal_approx(vol.min_value, 0.0) and is_equal_approx(vol.max_value, 1.0),
 		"and takes its bounds from the @export_range, so tightening the config tightens "
@@ -687,7 +687,7 @@ func _test_from_an_existing_config() -> void:
 	)
 
 	var quality := schema.find(&"quality")
-	_check(quality != null and quality.kind == DotSettingsDef.Kind.ENUM, "an @export_enum is an enum")
+	_check(quality != null and quality.kind == GSSettingsDef.Kind.ENUM, "an @export_enum is an enum")
 	_check(quality.options.size() == 3, "with its options")
 	_check(
 		String(quality.default_value) == "medium",
@@ -696,11 +696,11 @@ func _test_from_an_existing_config() -> void:
 	)
 
 	_check(
-		schema.find(&"sensitivity").scope == DotSettingsDef.Scope.ACCOUNT,
+		schema.find(&"sensitivity").scope == GSSettingsDef.Scope.ACCOUNT,
 		"scopes are the one thing a config cannot say, so they are passed in"
 	)
 	_check(
-		schema.find(&"field_of_view").scope == DotSettingsDef.Scope.SERVER_CLAMPED,
+		schema.find(&"field_of_view").scope == GSSettingsDef.Scope.SERVER_CLAMPED,
 		"including the one a server may cap"
 	)
 	_check(
@@ -725,9 +725,9 @@ func _test_from_an_existing_config() -> void:
 
 
 class ExampleGameConfig:
-	extends DotConfig
+	extends GSConfig
 
-	## A stand-in for the kind of DotConfig several games in this family already have:
+	## A stand-in for the kind of GSConfig several games in this family already have:
 	## player-facing settings that dot-ui already generates a panel from.
 
 	@export_range(0.0, 1.0, 0.01) var volume: float = 0.8

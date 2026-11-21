@@ -1,5 +1,5 @@
 @tool
-class_name DotSettingsSchema
+class_name GSSettingsSchema
 extends Resource
 
 ## Every setting a game has, declared once, with a version and the migrations between.
@@ -13,7 +13,7 @@ extends Resource
 ## Bumped whenever a stored document would need rewriting. Migrations run between.
 @export var version: int = 1
 
-@export var defs: Array[DotSettingsDef] = []
+@export var defs: Array[GSSettingsDef] = []
 
 ## How large a stored document may be, in keys.
 ##
@@ -25,13 +25,13 @@ extends Resource
 var _by_key: Dictionary = {}
 
 
-func add(def: DotSettingsDef) -> DotSettingsSchema:
+func add(def: GSSettingsDef) -> GSSettingsSchema:
 	defs.append(def)
 	_by_key.clear()
 	return self
 
 
-func find(key: StringName) -> DotSettingsDef:
+func find(key: StringName) -> GSSettingsDef:
 	_ensure_index()
 	return _by_key.get(key)
 
@@ -64,7 +64,7 @@ func categories() -> Array[StringName]:
 	return out
 
 
-func keys_in_scope(scope: DotSettingsDef.Scope) -> Array[StringName]:
+func keys_in_scope(scope: GSSettingsDef.Scope) -> Array[StringName]:
 	var out: Array[StringName] = []
 	for d in defs:
 		if d.scope == scope:
@@ -89,30 +89,30 @@ func defaults() -> Dictionary:
 
 
 ## Checks the schema itself, at boot.
-func validate() -> DotResult:
+func validate() -> GSResult:
 	if defs.is_empty():
-		return DotResult.fail(DotError.CODE_INVALID, "a schema with no settings in it")
+		return GSResult.fail(GSError.CODE_INVALID, "a schema with no settings in it")
 	var seen := {}
 	for d in defs:
 		if d == null:
-			return DotResult.fail(DotError.CODE_INVALID, "a null entry in the schema")
+			return GSResult.fail(GSError.CODE_INVALID, "a null entry in the schema")
 		var res := d.validate()
 		if not res.ok:
 			return res
 		if seen.has(d.key):
-			return DotResult.fail(
-				DotError.CODE_INVALID,
+			return GSResult.fail(
+				GSError.CODE_INVALID,
 				"'%s' is declared twice" % d.key,
 				"two declarations of one key means one of them is never read"
 			)
 		seen[d.key] = true
 	if defs.size() > max_keys:
-		return DotResult.fail(
-			DotError.CODE_INVALID,
+		return GSResult.fail(
+			GSError.CODE_INVALID,
 			"the schema declares more keys than it allows",
 			"%d declared, %d allowed" % [defs.size(), max_keys]
 		)
-	return DotResult.success(null)
+	return GSResult.success(null)
 
 
 ## Validates and corrects a whole stored document.
@@ -159,10 +159,10 @@ func coerce_document(raw: Dictionary) -> Dictionary:
 	}
 
 
-## Builds a schema from an existing [DotConfig], by reflection.
+## Builds a schema from an existing [GSConfig], by reflection.
 ##
 ## [b]This is the anti-duplication path and it is the one most existing code wants.[/b]
-## Several projects in this family already have a [DotConfig] full of player-facing
+## Several projects in this family already have a [GSConfig] full of player-facing
 ## settings — a volume, a camera follow time, whether to show names — which GameSpice UI already
 ## generates a panel from. Writing a schema beside one would be two copies of one list, and
 ## this tree's most repeated bug is a list that went stale.
@@ -170,12 +170,12 @@ func coerce_document(raw: Dictionary) -> Dictionary:
 ## So: the config keeps being the declaration, and this reads it. What the config cannot
 ## say is the part a schema adds — which scope a key belongs to, and which ones a server
 ## may clamp — so those arrive as [param scopes], keyed by name, defaulting to
-## [constant DotSettingsDef.Scope.DEVICE].
+## [constant GSSettingsDef.Scope.DEVICE].
 ##
 ## [codeblock]
-## var schema := DotSettingsSchema.from_config(my_config, {
-##     &"sensitivity": DotSettingsDef.Scope.ACCOUNT,
-##     &"field_of_view": DotSettingsDef.Scope.SERVER_CLAMPED,
+## var schema := GSSettingsSchema.from_config(my_config, {
+##     &"sensitivity": GSSettingsDef.Scope.ACCOUNT,
+##     &"field_of_view": GSSettingsDef.Scope.SERVER_CLAMPED,
 ## })
 ## [/codeblock]
 ##
@@ -183,9 +183,9 @@ func coerce_document(raw: Dictionary) -> Dictionary:
 ## with the right bounds and an `@export_enum` is a list with the right options — which
 ## means a setting whose range is tightened in the config is tightened everywhere at once.
 static func from_config(
-	config: DotConfig, scopes: Dictionary = {}, categories: Dictionary = {}
-) -> DotSettingsSchema:
-	var schema := DotSettingsSchema.new()
+	config: GSConfig, scopes: Dictionary = {}, categories: Dictionary = {}
+) -> GSSettingsSchema:
+	var schema := GSSettingsSchema.new()
 	if config == null:
 		return schema
 
@@ -194,10 +194,10 @@ static func from_config(
 		if not config.has_key(String(name)):
 			continue
 
-		var def := DotSettingsDef.new()
+		var def := GSSettingsDef.new()
 		def.key = name
 		def.default_value = config.get(name)
-		def.scope = scopes.get(name, DotSettingsDef.Scope.DEVICE)
+		def.scope = scopes.get(name, GSSettingsDef.Scope.DEVICE)
 		def.category = categories.get(name, &"general")
 
 		var hint := int(prop.get("hint", PROPERTY_HINT_NONE))
@@ -205,7 +205,7 @@ static func from_config(
 
 		match int(prop.get("type", TYPE_NIL)):
 			TYPE_BOOL:
-				def.kind = DotSettingsDef.Kind.BOOL
+				def.kind = GSSettingsDef.Kind.BOOL
 			TYPE_INT:
 				if hint == PROPERTY_HINT_ENUM:
 					# An @export_enum on an int is an index into a list of names. It is
@@ -213,7 +213,7 @@ static func from_config(
 					# number whose meaning changes the day somebody inserts an option --
 					# and every saved document then means something different with nothing
 					# saying so.
-					def.kind = DotSettingsDef.Kind.ENUM
+					def.kind = GSSettingsDef.Kind.ENUM
 					var options: Array[StringName] = []
 					for part in hint_string.split(","):
 						options.append(StringName(part.split(":")[0]))
@@ -224,13 +224,13 @@ static func from_config(
 						else (options[0] if not options.is_empty() else &"")
 					)
 				else:
-					def.kind = DotSettingsDef.Kind.INT
+					def.kind = GSSettingsDef.Kind.INT
 					_apply_range(def, hint, hint_string)
 			TYPE_FLOAT:
-				def.kind = DotSettingsDef.Kind.FLOAT
+				def.kind = GSSettingsDef.Kind.FLOAT
 				_apply_range(def, hint, hint_string)
 			_:
-				def.kind = DotSettingsDef.Kind.STRING
+				def.kind = GSSettingsDef.Kind.STRING
 				def.default_value = str(config.get(name))
 
 		# Whatever the config refuses from the environment and argv is private here too.
@@ -243,7 +243,7 @@ static func from_config(
 	return schema
 
 
-static func _apply_range(def: DotSettingsDef, hint: int, hint_string: String) -> void:
+static func _apply_range(def: GSSettingsDef, hint: int, hint_string: String) -> void:
 	if hint != PROPERTY_HINT_RANGE:
 		# No declared range. Left at the resource's defaults rather than invented: a
 		# made-up maximum is a slider that silently refuses a value the config accepts.
@@ -258,12 +258,12 @@ static func _apply_range(def: DotSettingsDef, hint: int, hint_string: String) ->
 		def.step = parts[2].to_float()
 
 
-## Writes this schema's values back into the [DotConfig] they came from.
+## Writes this schema's values back into the [GSConfig] they came from.
 ##
 ## The other half of [method from_config], and the reason both exist: the config is what
 ## the game already reads, so a settings document that does not reach it is a document
 ## nothing consumes — which is this family's single most repeated bug.
-func apply_to_config(config: DotConfig, values: Dictionary) -> PackedStringArray:
+func apply_to_config(config: GSConfig, values: Dictionary) -> PackedStringArray:
 	var written := PackedStringArray()
 	if config == null:
 		return written
@@ -271,30 +271,30 @@ func apply_to_config(config: DotConfig, values: Dictionary) -> PackedStringArray
 		if not values.has(d.key) or not config.has_key(String(d.key)):
 			continue
 		var value: Variant = values[d.key]
-		if d.kind == DotSettingsDef.Kind.ENUM:
+		if d.kind == GSSettingsDef.Kind.ENUM:
 			# Back to the index the config wants, from the name the document stores.
 			var index := d.options.find(StringName(str(value)))
 			if index < 0:
 				continue
 			value = index
-		if DotValue.differs(config.get(d.key), value):
+		if GSValue.differs(config.get(d.key), value):
 			config.set(d.key, value)
 			written.append(String(d.key))
 	return written
 
 
-## A [DotConfig] carrying this schema's current values.
+## A [GSConfig] carrying this schema's current values.
 ##
 ## [b]This is the whole of "integrates with GameSpice UI".[/b] GameSpice UI's settings panel is
-## generated from any [DotConfig], so handing one over means a new setting appears on a
+## generated from any [GSConfig], so handing one over means a new setting appears on a
 ## screen with nobody editing a screen — and this addon still does not know a [Control]
 ## exists.
 ##
 ## The config is a snapshot. Writing to it does not write here; [method
-## DotSettingsManager.absorb_config] is the way back, and it is explicit because a screen
+## GSSettingsManager.absorb_config] is the way back, and it is explicit because a screen
 ## with a Cancel button needs the two to be separable.
-func to_config(values: Dictionary) -> DotSettingsConfig:
-	var cfg := DotSettingsConfig.new()
+func to_config(values: Dictionary) -> GSSettingsConfig:
+	var cfg := GSSettingsConfig.new()
 	cfg.bind(self, values)
 	return cfg
 

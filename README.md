@@ -12,16 +12,16 @@ GameSpice Core and [GameSpice Save](https://github.com/gamespice-platform/save) 
 ## Use
 
 ```gdscript
-var schema := DotSettingsSchema.new()
-schema.add(DotSettingsDef.number(&"master_volume", 0.8, 0.0, 1.0, &"audio"))
-schema.add(DotSettingsDef.integer(&"fov", 90, 70, 120, &"video")
-    .with_scope(DotSettingsDef.Scope.SERVER_CLAMPED))
-schema.add(DotSettingsDef.binding(&"chat_open_key", "Y", &"chat")
-    .with_scope(DotSettingsDef.Scope.ACCOUNT))
+var schema := GSSettingsSchema.new()
+schema.add(GSSettingsDef.number(&"master_volume", 0.8, 0.0, 1.0, &"audio"))
+schema.add(GSSettingsDef.integer(&"fov", 90, 70, 120, &"video")
+    .with_scope(GSSettingsDef.Scope.SERVER_CLAMPED))
+schema.add(GSSettingsDef.binding(&"chat_open_key", "Y", &"chat")
+    .with_scope(GSSettingsDef.Scope.ACCOUNT))
 
-var settings := DotSettingsManager.new()
+var settings := GSSettingsManager.new()
 settings.schema = schema
-settings.local_store = DotSettingsStoreFile.new()
+settings.local_store = GSSettingsStoreFile.new()
 settings.app_namespace = &"my_game"
 settings.shared_namespace = &"tmc_account"      # optional
 add_child(settings)
@@ -31,7 +31,7 @@ settings.get_float(&"master_volume")
 settings.set_value(&"master_volume", 0.4)       # saved shortly after, atomically
 ```
 
-A key binding is stored as readable text (`"Y"`, `"Shift+A"`, `"Mouse 1"`), not a keycode, so the file means the same on every keyboard layout. GameSpice UI's `DotInputBinding` converts it to and from an `InputEvent`.
+A key binding is stored as readable text (`"Y"`, `"Shift+A"`, `"Mouse 1"`), not a keycode, so the file means the same on every keyboard layout. GameSpice UI's `GSInputBinding` converts it to and from an `InputEvent`.
 
 ## Scopes
 
@@ -55,7 +55,7 @@ settings.chosen_value(&"fov")   # 110, what the screen shows
 
 ## Settings screen
 
-`DotSettingsManager.to_config()` returns a `DotConfig` whose properties are the schema's keys. GameSpice UI builds a panel from any `DotConfig`, so you do not write one.
+`GSSettingsManager.to_config()` returns a `GSConfig` whose properties are the schema's keys. GameSpice UI builds a panel from any `GSConfig`, so you do not write one.
 
 ## Saving
 
@@ -69,7 +69,7 @@ settings.chosen_value(&"fov")   # 110, what the screen shows
 
 ## Stores
 
-`DotSettingsStore` has three methods. A file store and a memory store ship. An account store is an HTTP client against whichever back end you use; this addon does not choose it for you.
+`GSSettingsStore` has three methods. A file store and a memory store ship. An account store is an HTTP client against whichever back end you use; this addon does not choose it for you.
 
 ## Testing
 

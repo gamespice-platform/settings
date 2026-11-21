@@ -1,12 +1,12 @@
-class_name DotSettingsStore
+class_name GSSettingsStore
 extends RefCounted
 
 ## Where a settings document lives. Subclass to put it somewhere else.
 ##
-## Three implementations ship: [DotSettingsStoreMemory] for a suite,
-## [DotSettingsStoreFile] for a player's own machine, and nothing for an account —
+## Three implementations ship: [GSSettingsStoreMemory] for a suite,
+## [GSSettingsStoreFile] for a player's own machine, and nothing for an account —
 ## because an account store is an HTTP client against somebody's backbone and this addon
-## does not get to decide whose. [DotSettingsManager.remote_store] takes any subclass.
+## does not get to decide whose. [GSSettingsManager.remote_store] takes any subclass.
 ##
 ## [b]A document is addressed by (namespace, profile).[/b] The namespace is the game, or a
 ## name several games deliberately share; the profile is the person. Both are part of the
@@ -23,20 +23,20 @@ extends RefCounted
 ## is the first run of every installation, and a store that reports it as an error makes
 ## every caller write the same two-line special case — which is the case somebody gets
 ## wrong, and then a first run is a crash.
-func load_document(_app_namespace: StringName, _profile: StringName) -> DotResult:
-	return DotResult.fail(DotError.CODE_UNSUPPORTED, "this store cannot read")
+func load_document(_app_namespace: StringName, _profile: StringName) -> GSResult:
+	return GSResult.fail(GSError.CODE_UNSUPPORTED, "this store cannot read")
 
 
 ## Writes a document, replacing whatever was there.
 func save_document(
 	_app_namespace: StringName, _profile: StringName, _document: Dictionary
-) -> DotResult:
-	return DotResult.fail(DotError.CODE_UNSUPPORTED, "this store cannot write")
+) -> GSResult:
+	return GSResult.fail(GSError.CODE_UNSUPPORTED, "this store cannot write")
 
 
 ## Forgets a document entirely.
-func clear_document(_app_namespace: StringName, _profile: StringName) -> DotResult:
-	return DotResult.fail(DotError.CODE_UNSUPPORTED, "this store cannot clear")
+func clear_document(_app_namespace: StringName, _profile: StringName) -> GSResult:
+	return GSResult.fail(GSError.CODE_UNSUPPORTED, "this store cannot clear")
 
 
 ## Whether this store can be written to at all.

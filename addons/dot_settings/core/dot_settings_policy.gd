@@ -1,6 +1,6 @@
 @tool
-class_name DotSettingsPolicy
-extends DotConfig
+class_name GSSettingsPolicy
+extends GSConfig
 
 ## What a server is allowed to do to a player's settings.
 ##
@@ -51,7 +51,7 @@ func env_prefix() -> String:
 
 
 ## Whether [param key] may be clamped by a server.
-func may_clamp(schema: DotSettingsSchema, key: StringName) -> bool:
+func may_clamp(schema: GSSettingsSchema, key: StringName) -> bool:
 	if not accept_server_clamps:
 		return false
 	if never_clamped_keys.has(key):
@@ -63,7 +63,7 @@ func may_clamp(schema: DotSettingsSchema, key: StringName) -> bool:
 		return false
 	if def.private:
 		return false
-	return def.scope == DotSettingsDef.Scope.SERVER_CLAMPED
+	return def.scope == GSSettingsDef.Scope.SERVER_CLAMPED
 
 
 func describe_lines(_redact_sensitive: bool = true) -> PackedStringArray:

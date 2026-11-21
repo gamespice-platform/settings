@@ -8,30 +8,30 @@ var _failed := 0
 var _section_count := 0
 
 
-func _schema() -> DotSettingsSchema:
-	var s := DotSettingsSchema.new()
+func _schema() -> GSSettingsSchema:
+	var s := GSSettingsSchema.new()
 	s.version = 1
-	s.add(DotSettingsDef.number(&"master_volume", 0.8, 0.0, 1.0, &"audio"))
-	s.add(DotSettingsDef.integer(&"fov", 90, 70, 120, &"video").with_scope(
-		DotSettingsDef.Scope.SERVER_CLAMPED
+	s.add(GSSettingsDef.number(&"master_volume", 0.8, 0.0, 1.0, &"audio"))
+	s.add(GSSettingsDef.integer(&"fov", 90, 70, 120, &"video").with_scope(
+		GSSettingsDef.Scope.SERVER_CLAMPED
 	))
-	s.add(DotSettingsDef.boolean(&"subtitles", true, &"gameplay").with_scope(
-		DotSettingsDef.Scope.ACCOUNT
+	s.add(GSSettingsDef.boolean(&"subtitles", true, &"gameplay").with_scope(
+		GSSettingsDef.Scope.ACCOUNT
 	))
-	s.add(DotSettingsDef.number(&"sensitivity", 2.5, 0.1, 20.0, &"gameplay").with_scope(
-		DotSettingsDef.Scope.ACCOUNT
+	s.add(GSSettingsDef.number(&"sensitivity", 2.5, 0.1, 20.0, &"gameplay").with_scope(
+		GSSettingsDef.Scope.ACCOUNT
 	))
-	s.add(DotSettingsDef.choice(
+	s.add(GSSettingsDef.choice(
 		&"quality", &"high", [&"low", &"medium", &"high"] as Array[StringName], &"video"
 	).with_description("How much the renderer is asked to do").needing_restart())
-	s.add(DotSettingsDef.text(&"audio_device", "", &"audio").as_private())
+	s.add(GSSettingsDef.text(&"audio_device", "", &"audio").as_private())
 	return s
 
 
 func _test_defs() -> void:
 	_section("A setting knows what it may be")
 
-	var vol := DotSettingsDef.number(&"vol", 0.5, 0.0, 1.0)
+	var vol := GSSettingsDef.number(&"vol", 0.5, 0.0, 1.0)
 	_check(vol.validate().ok, "a well-formed setting validates")
 	_check(float(vol.coerce(2.0).value) == 1.0, "a number above the range is clamped, not refused")
 	_check(float(vol.coerce("0.25").value) == 0.25, "and a string that is a number is read")
@@ -40,23 +40,23 @@ func _test_defs() -> void:
 	# The type of the corrected value matters: an int-typed clamp on a float setting is a
 	# volume slider that can only be 0 or 1, and every property about it reads correctly.
 	_check(vol.coerce(0.37).value is float, "a float setting stays a float through coercion")
-	var count := DotSettingsDef.integer(&"count", 4, 0, 10)
+	var count := GSSettingsDef.integer(&"count", 4, 0, 10)
 	_check(count.coerce(3.7).value is int, "and an int setting comes back an int")
 	_check(int(count.coerce(3.7).value) == 4, "snapped rather than truncated")
 
-	var q := DotSettingsDef.choice(&"q", &"high", [&"low", &"high"] as Array[StringName])
+	var q := GSSettingsDef.choice(&"q", &"high", [&"low", &"high"] as Array[StringName])
 	_check(not q.coerce(&"ultra").ok, "an unknown option is refused rather than defaulted")
 	_check(q.coerce(&"low").ok, "and a known one is taken")
 
-	var broken := DotSettingsDef.choice(&"b", &"nope", [&"low"] as Array[StringName])
+	var broken := GSSettingsDef.choice(&"b", &"nope", [&"low"] as Array[StringName])
 	_check(not broken.validate().ok, "a default that is not one of the options fails at boot")
 
-	var bad_key := DotSettingsDef.boolean(&"not a key", true)
+	var bad_key := GSSettingsDef.boolean(&"not a key", true)
 	_check(not bad_key.validate().ok, "and so does a key that cannot be a filename")
 
-	var bind := DotSettingsDef.binding(&"chat_open", "Y")
+	var bind := GSSettingsDef.binding(&"chat_open", "Y")
 	_check(bind.validate().ok, "a binding is a setting like any other")
-	_check(bind.kind == DotSettingsDef.Kind.BINDING, "declared as a binding, not as text")
+	_check(bind.kind == GSSettingsDef.Kind.BINDING, "declared as a binding, not as text")
 	_check(str(bind.coerce("Shift+A").value) == "Shift+A", "and its text is carried through")
 	_check(
 		bind.category == &"controls",
@@ -69,7 +69,7 @@ func _test_defs() -> void:
 		"a binding is bounded like every other string in a document"
 	)
 
-	var b := DotSettingsDef.boolean(&"b", false)
+	var b := GSSettingsDef.boolean(&"b", false)
 	_check(bool(b.coerce("on").value), "'on' is true")
 	_check(not bool(b.coerce("0").value), "'0' is false")
 	_check(not b.coerce("maybe").ok, "and 'maybe' is refused")
@@ -84,18 +84,18 @@ func _test_schema() -> void:
 	_check(s.categories().size() == 3, "grouped into categories a screen can use")
 	_check(s.keys_in_category(&"video").size() == 2, "with the right members")
 	_check(
-		s.keys_in_scope(DotSettingsDef.Scope.ACCOUNT).size() == 2,
+		s.keys_in_scope(GSSettingsDef.Scope.ACCOUNT).size() == 2,
 		"and knows which ones follow a player between machines"
 	)
 
-	var dupe := DotSettingsSchema.new()
-	dupe.add(DotSettingsDef.boolean(&"x", true))
-	dupe.add(DotSettingsDef.boolean(&"x", false))
+	var dupe := GSSettingsSchema.new()
+	dupe.add(GSSettingsDef.boolean(&"x", true))
+	dupe.add(GSSettingsDef.boolean(&"x", false))
 	_check(
 		not dupe.validate().ok,
 		"a key declared twice is refused, because one of the two is never read"
 	)
-	_check(not DotSettingsSchema.new().validate().ok, "and so is a schema with nothing in it")
+	_check(not GSSettingsSchema.new().validate().ok, "and so is a schema with nothing in it")
 
 	var defaults := s.defaults()
 	defaults[&"master_volume"] = 0.1

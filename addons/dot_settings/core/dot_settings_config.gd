@@ -1,11 +1,11 @@
-class_name DotSettingsConfig
-extends DotConfig
+class_name GSSettingsConfig
+extends GSConfig
 
-## A [DotConfig] whose properties are a [DotSettingsSchema]'s keys, built at runtime.
+## A [GSConfig] whose properties are a [GSSettingsSchema]'s keys, built at runtime.
 ##
 ## [b]This exists so that "integrates with GameSpice UI" costs this addon no dependency at
-## all.[/b] GameSpice UI's settings panel is generated from any [DotConfig] by reflection, and
-## [DotConfig] itself discovers its keys through [method Object.get_property_list]. So a
+## all.[/b] GameSpice UI's settings panel is generated from any [GSConfig] by reflection, and
+## [GSConfig] itself discovers its keys through [method Object.get_property_list]. So a
 ## config that answers [method Object._get_property_list] with a schema's keys is a
 ## settings screen, a layered configuration and a console's completion source at once —
 ## and nothing here names a [Control], a [Theme] or GameSpice UI.
@@ -19,14 +19,14 @@ extends DotConfig
 ## the properties are then real as far as every reflective caller is concerned.
 ##
 ## It is a [b]snapshot[/b]. Writing here does not write through to a
-## [DotSettingsManager]; [method DotSettingsManager.absorb_config] is the way back, and it
+## [GSSettingsManager]; [method GSSettingsManager.absorb_config] is the way back, and it
 ## is explicit because a screen with a Cancel button needs the two to be separable.
 
-var _schema: DotSettingsSchema = null
+var _schema: GSSettingsSchema = null
 var _values: Dictionary = {}
 
 
-func bind(schema: DotSettingsSchema, values: Dictionary) -> void:
+func bind(schema: GSSettingsSchema, values: Dictionary) -> void:
 	_schema = schema
 	_values = values.duplicate()
 	notify_property_list_changed()
@@ -59,9 +59,9 @@ func sensitive_keys() -> PackedStringArray:
 	return out
 
 
-func validate() -> DotResult:
+func validate() -> GSResult:
 	if _schema == null:
-		return DotResult.success(null)
+		return GSResult.success(null)
 	for k in _values.keys():
 		var def := _schema.find(StringName(str(k)))
 		if def == null:
@@ -69,7 +69,7 @@ func validate() -> DotResult:
 		var res := def.coerce(_values[k])
 		if not res.ok:
 			return res
-	return DotResult.success(null)
+	return GSResult.success(null)
 
 
 # --- The reflective half ----------------------------------------------------
@@ -82,13 +82,13 @@ func _get_property_list() -> Array[Dictionary]:
 	# A GROUP ENTRY WHENEVER THE CATEGORY CHANGES, which this did not emit at all.
 	#
 	# `PROPERTY_USAGE_GROUP` is what `@export_group` compiles to and is the only thing a
-	# reflective reader has to group by -- `DotSettingsPanel` walks the property list
+	# reflective reader has to group by -- `GSSettingsPanel` walks the property list
 	# looking for exactly it. Without one, every setting landed under whatever heading the
 	# panel falls back to, and a generated screen came out with one section called
 	# **"Resource"**: the base class name, over the volume, the field of view and the chat
 	# lines together.
 	#
-	# `DotSettingsDef.category` has carried "Video", "Audio", "Gameplay" since the class was
+	# `GSSettingsDef.category` has carried "Video", "Audio", "Gameplay" since the class was
 	# written, and every schema in this family sets it. It reached nothing. Nobody could see
 	# it because the panel drew perfectly and the heading was a plausible word.
 	var current := &""
@@ -108,11 +108,11 @@ func _get_property_list() -> Array[Dictionary]:
 	return out
 
 
-func _property_for(d: DotSettingsDef) -> Dictionary:
+func _property_for(d: GSSettingsDef) -> Dictionary:
 	var entry := {
 		"name": String(d.key),
 		"type": _variant_type_for(d),
-		# SCRIPT_VARIABLE and STORAGE together are what DotConfig's own filter looks for,
+		# SCRIPT_VARIABLE and STORAGE together are what GSConfig's own filter looks for,
 		# and EDITOR is what puts it in front of a person.
 		"usage": (
 			PROPERTY_USAGE_SCRIPT_VARIABLE | PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_EDITOR
@@ -121,13 +121,13 @@ func _property_for(d: DotSettingsDef) -> Dictionary:
 		"hint_string": "",
 	}
 	match d.kind:
-		DotSettingsDef.Kind.INT, DotSettingsDef.Kind.FLOAT:
+		GSSettingsDef.Kind.INT, GSSettingsDef.Kind.FLOAT:
 			if d.max_value > d.min_value:
 				entry["hint"] = PROPERTY_HINT_RANGE
 				entry["hint_string"] = (
 					"%f,%f,%f" % [d.min_value, d.max_value, maxf(d.step, 0.001)]
 				)
-		DotSettingsDef.Kind.ENUM:
+		GSSettingsDef.Kind.ENUM:
 			entry["hint"] = PROPERTY_HINT_ENUM
 			var names := PackedStringArray()
 			for o in d.options:
@@ -136,13 +136,13 @@ func _property_for(d: DotSettingsDef) -> Dictionary:
 	return entry
 
 
-func _variant_type_for(d: DotSettingsDef) -> int:
+func _variant_type_for(d: GSSettingsDef) -> int:
 	match d.kind:
-		DotSettingsDef.Kind.BOOL:
+		GSSettingsDef.Kind.BOOL:
 			return TYPE_BOOL
-		DotSettingsDef.Kind.INT:
+		GSSettingsDef.Kind.INT:
 			return TYPE_INT
-		DotSettingsDef.Kind.FLOAT:
+		GSSettingsDef.Kind.FLOAT:
 			return TYPE_FLOAT
 		_:
 			return TYPE_STRING
@@ -168,7 +168,7 @@ func _set(property: StringName, value: Variant) -> bool:
 	if not res.ok:
 		# Refusing here rather than storing the bad value: an out-of-range slider on a
 		# generated screen should snap, not poison the document that gets saved.
-		DotLog.warn("settings", "refused a value", {"key": String(property), "why": res.error.message})
+		GSLog.warn("settings", "refused a value", {"key": String(property), "why": res.error.message})
 		return true
 	_values[property] = res.value
 	return true

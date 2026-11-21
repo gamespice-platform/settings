@@ -1,5 +1,5 @@
-class_name DotSettingsStoreMemory
-extends DotSettingsStore
+class_name GSSettingsStoreMemory
+extends GSSettingsStore
 
 ## A store that forgets when the process does. For suites, and for a demo build.
 ##
@@ -18,26 +18,26 @@ func _address(app_namespace: StringName, profile: StringName) -> String:
 	return "%s/%s" % [app_namespace, profile]
 
 
-func load_document(app_namespace: StringName, profile: StringName) -> DotResult:
+func load_document(app_namespace: StringName, profile: StringName) -> GSResult:
 	# Duplicated on the way out. A Dictionary is a reference in GDScript, and this family
 	# has shipped that aliasing four times -- a scoped leaderboard sharing its template's
 	# dictionary being the first.
 	var d: Dictionary = _docs.get(_address(app_namespace, profile), {})
-	return DotResult.success(d.duplicate(true))
+	return GSResult.success(d.duplicate(true))
 
 
 func save_document(
 	app_namespace: StringName, profile: StringName, document: Dictionary
-) -> DotResult:
+) -> GSResult:
 	if _read_only:
-		return DotResult.fail(DotError.CODE_FORBIDDEN, "this store is read-only")
+		return GSResult.fail(GSError.CODE_FORBIDDEN, "this store is read-only")
 	_docs[_address(app_namespace, profile)] = document.duplicate(true)
-	return DotResult.success(null)
+	return GSResult.success(null)
 
 
-func clear_document(app_namespace: StringName, profile: StringName) -> DotResult:
+func clear_document(app_namespace: StringName, profile: StringName) -> GSResult:
 	_docs.erase(_address(app_namespace, profile))
-	return DotResult.success(null)
+	return GSResult.success(null)
 
 
 func writable() -> bool:

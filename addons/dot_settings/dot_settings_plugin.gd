@@ -10,7 +10,7 @@ const _ICON := "res://addons/dot_settings/icon_placeholder.svg"
 
 const _TYPES := [
 	[
-		"DotSettingsManager",
+		"GSSettingsManager",
 		"Node",
 		"res://addons/dot_settings/runtime/dot_settings_manager.gd",
 	],

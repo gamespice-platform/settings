@@ -4,21 +4,21 @@ Why GameSpice Settings is shaped the way it is, and why the obvious alternative 
 
 ## Why this exists
 
-A `DotConfig` is a deployment's configuration: layered from defaults, a file, the environment and argv, loaded at boot and not written back. A volume slider is none of those things: it changes at runtime, it belongs to a person rather than to a process, and it has to survive a crash.
+A `GSConfig` is a deployment's configuration: layered from defaults, a file, the environment and argv, loaded at boot and not written back. A volume slider is none of those things: it changes at runtime, it belongs to a person rather than to a process, and it has to survive a crash.
 
-## `DotSettingsConfig`: a `DotConfig` built from a schema
+## `GSSettingsConfig`: a `GSConfig` built from a schema
 
-`DotSettingsConfig` is the bridge and the interesting part of the addon: a `DotConfig` whose properties are a schema's keys, built at runtime. GameSpice UI generates a settings panel from any `DotConfig` by reflection, so handing one over means **a new setting appears on a screen with nobody editing a screen**, and this addon still does not know a `Control` exists.
+`GSSettingsConfig` is the bridge and the interesting part of the addon: a `GSConfig` whose properties are a schema's keys, built at runtime. GameSpice UI generates a settings panel from any `GSConfig` by reflection, so handing one over means **a new setting appears on a screen with nobody editing a screen**, and this addon still does not know a `Control` exists.
 
-The obvious spelling does not work: **Godot refuses a dynamic property on an `Object`**. Assigning `cfg.some_new_key = 1` pushes an error and sets nothing. `_get_property_list` / `_get` / `_set` is the supported way, and the properties are then real to every reflective caller, including `DotConfig`'s own `config_keys()`.
+The obvious spelling does not work: **Godot refuses a dynamic property on an `Object`**. Assigning `cfg.some_new_key = 1` pushes an error and sets nothing. `_get_property_list` / `_get` / `_set` is the supported way, and the properties are then real to every reflective caller, including `GSConfig`'s own `config_keys()`.
 
 **Categories become `PROPERTY_USAGE_GROUP` entries, after the base class's own.** That constant is what `@export_group` compiles to and the only thing a reflective reader has to group by. `get_property_list()` includes `Resource`'s groups, and a reader tracks the most recent entry it has passed, so a group emitted before them would be overwritten by the class name again. The suite asserts the order rather than the absence, because the built-in one is legitimately there ([history](history.md#every-setting-under-one-heading-called-resource)).
 
 ## `from_config`, the path most existing code wants
 
-Several projects already have a `DotConfig` full of player-facing settings, and dot-ui already generates a panel from one. Writing a schema beside such a config would be **two copies of one list**, this tree's most repeated bug.
+Several projects already have a `GSConfig` full of player-facing settings, and dot-ui already generates a panel from one. Writing a schema beside such a config would be **two copies of one list**, this tree's most repeated bug.
 
-`DotSettingsSchema.from_config(cfg, scopes)` reads it instead. Ranges come from `@export_range`, options from `@export_enum`, and anything in `sensitive_keys()` becomes `private`. What a config cannot say is the scope (which keys follow a person and which a server may clamp), so that arrives as a dictionary and nothing else is repeated.
+`GSSettingsSchema.from_config(cfg, scopes)` reads it instead. Ranges come from `@export_range`, options from `@export_enum`, and anything in `sensitive_keys()` becomes `private`. What a config cannot say is the scope (which keys follow a person and which a server may clamp), so that arrives as a dictionary and nothing else is repeated.
 
 `apply_to_config` is the way back, and both exist for one reason: **the config is what the game already reads.** A settings document that does not reach it is a document nothing consumes.
 
@@ -50,14 +50,14 @@ The downgrade path. A player who runs a newer build, changes a setting it added 
 
 - **Coercion corrects, and refuses only what is not the setting.** A settings file is edited by hand more often than any other file in a game. Refusing the whole document because one slider is out of range is a player who lost every other setting they had. The exception is an enum: an unknown option is refused outright, because silently substituting the default means a renamed option puts everybody back to "low" with nothing said.
 - **`_clamp_number` returns a `Variant`.** Its two branches return different types, and declaring it `int` silently truncates every float setting in the schema: a volume slider that can only be 0 or 1, with every property about it reading correctly.
-- **Compare across Variant types with `DotValue`.** `!=` between two mismatched Variant types is a runtime error in GDScript, not `true` ([history](history.md#a-comparison-that-aborted-a-green-suite)).
+- **Compare across Variant types with `GSValue`.** `!=` between two mismatched Variant types is a runtime error in GDScript, not `true` ([history](history.md#a-comparison-that-aborted-a-green-suite)).
 - **A value that changed only its Variant type is not a correction worth telling a player about.** `fov: 110 -> 110` is noise, and noise is what stops the real lines being read. The comparison is on what they print, which is exactly the question being asked.
 
 ## Storage
 
 - **A missing document is a success.** "Nobody has ever saved settings here" is the first run of every installation. A store that reports it as an error makes every caller write the same special case, and that is the case somebody gets wrong; then a first run is a crash.
 - **A corrupt file is renamed to `.broken`, not deleted.** The one thing worse than losing a settings file is losing it and being unable to show anybody what was in it.
-- **`DotSettingsStoreFile` writes atomic JSON under `user://`, flushed for the web**; `DotSettingsStoreMemory` is a suite's store and the honest fallback for a refused storage quota.
+- **`GSSettingsStoreFile` writes atomic JSON under `user://`, flushed for the web**; `GSSettingsStoreMemory` is a suite's store and the honest fallback for a refused storage quota.
 - **`app_namespace`, not `namespace`.** `namespace` is a reserved word in GDScript, and the error it produces is *"Expected parameter name"*, which points at the punctuation rather than at the word.
 
 ## A value nobody chose follows its default
@@ -66,7 +66,7 @@ A document stores every value, so a value equal to its default looked exactly li
 
 **The document records the default each value was saved under** (its `defaults` section, beside `values`). On load, a value still equal to the default it was saved under, where that default has since changed, moves to the current one and is saved, so it happens once. A value that differs from its recorded default was chosen and is kept, even where it equals some other row's old default. This holds for every kind, not only keys: a retuned slider default reaches everybody who never moved the slider.
 
-**A document from before that record** carries no defaults, so a setting declares what its default used to be (`DotSettingsDef.previous_defaults`, `with_previous_defaults([...])`) and a stored value equal to one of them moves, once. A player who genuinely chose the old default loses that one choice; the alternative, keeping every old default, is the bug.
+**A document from before that record** carries no defaults, so a setting declares what its default used to be (`GSSettingsDef.previous_defaults`, `with_previous_defaults([...])`) and a stored value equal to one of them moves, once. A player who genuinely chose the old default loses that one choice; the alternative, keeping every old default, is the bug.
 
 Saving only the values that differ from their defaults would do the same, and is not done: it changes what every existing document reader sees, and a document that omits a value cannot tell "never chosen" from "written by a build that did not declare it".
 
@@ -74,15 +74,15 @@ The `defaults` section is neither a setting nor an unknown key: unknown keys are
 
 ## Bindings are opaque text
 
-`DotSettingsDef.binding(key, default, category)` declares a key binding as a setting, bounded at 32 characters: long enough for `"Shift+Kp Subtract"` and nothing like long enough to be a payload. GameSpice Menu's key table declares its rows this way.
+`GSSettingsDef.binding(key, default, category)` declares a key binding as a setting, bounded at 32 characters: long enough for `"Shift+Kp Subtract"` and nothing like long enough to be a payload. GameSpice Menu's key table declares its rows this way.
 
-**The value stays opaque here, and that is the seam.** GameSpice Settings does not depend on GameSpice UI and has no opinion about what a key is called; GameSpice UI's `DotInputBinding` reads and writes the text. What this addon guarantees is what it guarantees for any string: the setting is declared, bounded, scoped and enumerable.
+**The value stays opaque here, and that is the seam.** GameSpice Settings does not depend on GameSpice UI and has no opinion about what a key is called; GameSpice UI's `GSInputBinding` reads and writes the text. What this addon guarantees is what it guarantees for any string: the setting is declared, bounded, scoped and enumerable.
 
 Text rather than a keycode because a settings document is written to disk, may be synchronised to an account, and is hand-edited. `"Y"` survives all three; `89` survives none of them, and is also a number that means a different key on a different layout.
 
 ## Deliberately not here
 
 - **An account store.** It is an HTTP client against somebody's backbone, and whose backbone it is, is not this addon's decision. `remote_store` takes any subclass.
-- **A settings screen.** GameSpice UI generates one from the `DotConfig`. Shipping a second would be two screens to keep in step.
+- **A settings screen.** GameSpice UI generates one from the `GSConfig`. Shipping a second would be two screens to keep in step.
 - **Key binding storage beyond a string.** GameSpice UI has the rebinder and the conflict detection; this stores what it produces.
 - **Cloud conflict resolution.** Two machines that both changed the same account setting while offline is a real problem and a bigger one than this; the manager's stamps make it newest-choice-wins per key, which is only as good as the two machines' clocks agree, and the addon says so rather than pretending to more.

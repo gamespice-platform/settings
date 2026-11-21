@@ -1,12 +1,12 @@
-class_name DotSettingsManager
+class_name GSSettingsManager
 extends Node
 
 ## The one node a game holds. Reads, writes, migrates and shares a settings document.
 ##
 ## [codeblock]
-## var settings := DotSettingsManager.new()
+## var settings := GSSettingsManager.new()
 ## settings.schema = my_schema
-## settings.local_store = DotSettingsStoreFile.new()
+## settings.local_store = GSSettingsStoreFile.new()
 ## settings.app_namespace = &"my_game"
 ## add_child(settings)
 ## settings.setup()
@@ -29,7 +29,7 @@ extends Node
 ## untouched.
 ##
 ## [b]Account settings are a second document, not a merged one.[/b] [member
-## shared_namespace] is where [constant DotSettingsDef.Scope.ACCOUNT] keys live, so two
+## shared_namespace] is where [constant GSSettingsDef.Scope.ACCOUNT] keys live, so two
 ## games that opt into the same name genuinely share one sensitivity and one crosshair,
 ## and a game that does not opt in is unaffected by either.
 ##
@@ -71,16 +71,16 @@ signal reloaded()
 signal clamped(key: StringName, bound: Variant, applied: bool)
 
 ## Something was saved, or could not be.
-signal saved(res: DotResult)
+signal saved(res: GSResult)
 
-@export var schema: DotSettingsSchema = null
+@export var schema: GSSettingsSchema = null
 
-@export var policy: DotSettingsPolicy = null
+@export var policy: GSSettingsPolicy = null
 
 ## The game's own name, and the address of its document.
 @export var app_namespace: StringName = &"game"
 
-## Where [constant DotSettingsDef.Scope.ACCOUNT] keys live.
+## Where [constant GSSettingsDef.Scope.ACCOUNT] keys live.
 ##
 ## Empty means "with everything else", which keeps a single game self-contained. Set it
 ## to a name several titles share and a player configures their sensitivity once.
@@ -104,15 +104,15 @@ signal saved(res: DotResult)
 
 @export var register_as_service: bool = true
 
-## Where the document is stored. A [DotSettingsStoreFile] in nearly every deployment.
-var local_store: DotSettingsStore = null
+## Where the document is stored. A [GSSettingsStoreFile] in nearly every deployment.
+var local_store: GSSettingsStore = null
 
 ## Where account-scoped settings are stored, when they are not local.
 ##
-## Any [DotSettingsStore]. An HTTP-backed one against a backbone is the deployment that
+## Any [GSSettingsStore]. An HTTP-backed one against a backbone is the deployment that
 ## makes settings follow a player between machines, and this addon deliberately does not
 ## ship one — whose backbone it is, is not its decision.
-var remote_store: DotSettingsStore = null
+var remote_store: GSSettingsStore = null
 
 ## A migration per version step. [code](document: Dictionary) -> Dictionary[/code].
 ##
@@ -140,21 +140,21 @@ var _restart_pending: Dictionary = {}
 var _loaded := false
 
 
-func setup() -> DotResult:
+func setup() -> GSResult:
 	if schema == null:
-		return DotResult.fail(DotError.CODE_INVALID, "a settings manager with no schema")
+		return GSResult.fail(GSError.CODE_INVALID, "a settings manager with no schema")
 	var res := schema.validate()
 	if not res.ok:
 		return res.wrap("settings schema")
 	if policy == null:
-		policy = DotSettingsPolicy.new()
+		policy = GSSettingsPolicy.new()
 	if local_store == null:
-		local_store = DotSettingsStoreMemory.new()
+		local_store = GSSettingsStoreMemory.new()
 
 	_values = schema.defaults()
 	var loaded := load_now()
 	if register_as_service:
-		DotRegistry.register(SERVICE, self)
+		GSRegistry.register(SERVICE, self)
 	return loaded
 
 
@@ -164,7 +164,7 @@ func _exit_tree() -> void:
 	if _dirty:
 		flush()
 	if register_as_service:
-		DotRegistry.unregister_instance(SERVICE, self)
+		GSRegistry.unregister_instance(SERVICE, self)
 
 
 func _notification(what: int) -> void:
@@ -210,11 +210,11 @@ func get_string(key: StringName, fallback: String = "") -> String:
 
 
 ## Sets a value, coercing it. Returns what was actually stored, or a failure.
-func set_value(key: StringName, value: Variant, reason: StringName = &"user") -> DotResult:
+func set_value(key: StringName, value: Variant, reason: StringName = &"user") -> GSResult:
 	var def := schema.find(key) if schema != null else null
 	if def == null:
-		return DotResult.fail(
-			DotError.CODE_INVALID,
+		return GSResult.fail(
+			GSError.CODE_INVALID,
 			"'%s' is not a declared setting" % key,
 			"a setting nothing declares is a setting nothing can validate or show"
 		)
@@ -226,25 +226,25 @@ func set_value(key: StringName, value: Variant, reason: StringName = &"user") ->
 	# Not `==`. The stored value and the coerced one are both Variants whose types the
 	# caller does not control -- a value read from JSON against one read from a
 	# declaration -- and GDScript's comparison between two mismatched types is an error.
-	if DotValue.same(_values.get(key), stored):
-		return DotResult.success(stored)
+	if GSValue.same(_values.get(key), stored):
+		return GSResult.success(stored)
 
 	_values[key] = stored
-	if def.scope == DotSettingsDef.Scope.ACCOUNT:
+	if def.scope == GSSettingsDef.Scope.ACCOUNT:
 		_stamps[key] = _next_stamp(key)
 	_dirty = true
 	_dirty_since_ms = Time.get_ticks_msec()
 	if def.requires_restart:
 		_restart_pending[key] = true
 	changed.emit(key, get_value(key), reason)
-	return DotResult.success(stored)
+	return GSResult.success(stored)
 
 
 ## Puts one setting back to its declared default.
-func reset_value(key: StringName) -> DotResult:
+func reset_value(key: StringName) -> GSResult:
 	var def := schema.find(key) if schema != null else null
 	if def == null:
-		return DotResult.fail(DotError.CODE_INVALID, "'%s' is not a declared setting" % key)
+		return GSResult.fail(GSError.CODE_INVALID, "'%s' is not a declared setting" % key)
 	return set_value(key, def.default_value, &"reset")
 
 
@@ -257,7 +257,7 @@ func reset_all() -> void:
 	_values = schema.defaults()
 	# A reset is a choice like any other, and it has to beat the old value in the account
 	# document or the next load brings that value straight back.
-	for k in schema.keys_in_scope(DotSettingsDef.Scope.ACCOUNT):
+	for k in schema.keys_in_scope(GSSettingsDef.Scope.ACCOUNT):
 		_stamps[k] = _next_stamp(k)
 	_dirty = true
 	_dirty_since_ms = Time.get_ticks_msec()
@@ -272,7 +272,7 @@ func has_unsaved_changes() -> bool:
 
 ## Whether anything changed this session only takes effect after a restart.
 ##
-## [b]`DotSettingsDef.requires_restart` was declared, documented and read by nothing.[/b]
+## [b]`GSSettingsDef.requires_restart` was declared, documented and read by nothing.[/b]
 ## A game holds a manager, never a def, so "which of the things I just changed need a
 ## restart" had no answer anywhere -- and the symptom is the one every options screen with
 ## this bug has: a renderer setting that appears to apply and does not, with no notice.
@@ -296,9 +296,9 @@ func restart_pending() -> PackedStringArray:
 # --- Loading and saving -----------------------------------------------------
 
 ## Reads from the stores and replaces everything in memory.
-func load_now() -> DotResult:
+func load_now() -> GSResult:
 	if schema == null:
-		return DotResult.fail(DotError.CODE_STATE, "no schema")
+		return GSResult.fail(GSError.CODE_STATE, "no schema")
 
 	var raw := {}
 	if local_store != null:
@@ -348,20 +348,20 @@ func load_now() -> DotResult:
 		var shared: Variant = _read_account()
 		if shared is Dictionary:
 			adopted = _merge_account(shared, false)
-		if not stamped_locally and not schema.keys_in_scope(DotSettingsDef.Scope.ACCOUNT).is_empty():
+		if not stamped_locally and not schema.keys_in_scope(GSSettingsDef.Scope.ACCOUNT).is_empty():
 			# A document from before stamps: save soon so both halves carry them.
 			_dirty = true
 			_dirty_since_ms = Time.get_ticks_msec()
 	if not adopted.is_empty():
 		_dirty = true
 		_dirty_since_ms = Time.get_ticks_msec()
-		DotLog.debug(CHANNEL, "account settings newer than this game's copy", {"what": ", ".join(adopted)})
+		GSLog.debug(CHANNEL, "account settings newer than this game's copy", {"what": ", ".join(adopted)})
 
 	if not followed.is_empty():
 		# Saved soon, so the document records the default it is under now and this runs once.
 		_dirty = true
 		_dirty_since_ms = Time.get_ticks_msec()
-		DotLog.info(
+		GSLog.info(
 			CHANNEL,
 			"%d stored settings were on an old default and follow the new one" % followed.size(),
 			{"what": ", ".join(followed)}
@@ -369,7 +369,7 @@ func load_now() -> DotResult:
 
 	var corrected: PackedStringArray = coerced["corrected"]
 	if not corrected.is_empty():
-		DotLog.info(
+		GSLog.info(
 			CHANNEL,
 			"corrected %d stored settings" % corrected.size(),
 			{"what": ", ".join(corrected)}
@@ -378,7 +378,7 @@ func load_now() -> DotResult:
 	if not refused.is_empty():
 		# A warning rather than info: a refused value is one a player chose and did not
 		# get, which is the half they would want to be told about.
-		DotLog.warn(
+		GSLog.warn(
 			CHANNEL,
 			"%d stored settings could not be read and are back at their defaults" % refused.size(),
 			{"what": ", ".join(refused)}
@@ -386,22 +386,22 @@ func load_now() -> DotResult:
 	if not _unknown.is_empty():
 		# Not a warning. A newer build's settings are the expected reason, and a red line
 		# about a condition that is normal is how a real one stops being read.
-		DotLog.debug(
+		GSLog.debug(
 			CHANNEL, "keeping %d settings this build does not declare" % _unknown.size()
 		)
 
 	reloaded.emit()
-	return DotResult.success(null)
+	return GSResult.success(null)
 
 
 ## Writes now, whatever the debounce says.
-func flush() -> DotResult:
+func flush() -> GSResult:
 	_dirty = false
 	if not persist or local_store == null:
-		return DotResult.success(null)
+		return GSResult.success(null)
 	if not local_store.writable():
-		var refused := DotResult.fail(
-			DotError.CODE_FORBIDDEN, "settings cannot be saved on this machine"
+		var refused := GSResult.fail(
+			GSError.CODE_FORBIDDEN, "settings cannot be saved on this machine"
 		)
 		saved.emit(refused)
 		return refused
@@ -409,7 +409,7 @@ func flush() -> DotResult:
 	# Read the account document again before writing it. Another game may have changed an
 	# account setting since this one loaded, and writing this process's copy over it would
 	# undo that change: per key, whichever choice is newer stays, here and on disk.
-	var account_keys := schema.keys_in_scope(DotSettingsDef.Scope.ACCOUNT)
+	var account_keys := schema.keys_in_scope(GSSettingsDef.Scope.ACCOUNT)
 	if _shares_account() and not account_keys.is_empty():
 		var current: Variant = _read_account()
 		if current is Dictionary:
@@ -426,12 +426,12 @@ func flush() -> DotResult:
 		shared[ACCOUNT_STAMPS_KEY] = stamps
 		var sres := _account_store().save_document(shared_namespace, profile, shared)
 		if not sres.ok:
-			DotLog.warn(CHANNEL, "account settings not saved", {"why": sres.error.message})
+			GSLog.warn(CHANNEL, "account settings not saved", {"why": sres.error.message})
 	saved.emit(res)
 	return res
 
 
-func _account_store() -> DotSettingsStore:
+func _account_store() -> GSSettingsStore:
 	return remote_store if remote_store != null else local_store
 
 
@@ -444,7 +444,7 @@ func _shares_account() -> bool:
 func _read_account() -> Variant:
 	var res := _account_store().load_document(shared_namespace, profile)
 	if not res.ok:
-		DotLog.warn(CHANNEL, "account settings not read", {"why": res.error.message})
+		GSLog.warn(CHANNEL, "account settings not read", {"why": res.error.message})
 		return null
 	var doc: Dictionary = res.value
 	var values := {}
@@ -468,7 +468,7 @@ func _merge_account(shared: Dictionary, announce: bool) -> PackedStringArray:
 	var stamps: Dictionary = shared["stamps"]
 	for key in values.keys():
 		var def := schema.find(key)
-		if def == null or def.scope != DotSettingsDef.Scope.ACCOUNT:
+		if def == null or def.scope != GSSettingsDef.Scope.ACCOUNT:
 			continue
 		var theirs := int(stamps.get(key, LEGACY_ACCOUNT_STAMP))
 		var ours := int(_stamps.get(key, 0))
@@ -480,7 +480,7 @@ func _merge_account(shared: Dictionary, announce: bool) -> PackedStringArray:
 		if not c.ok:
 			continue
 		_stamps[key] = theirs
-		if DotValue.same(_values.get(key), c.value):
+		if GSValue.same(_values.get(key), c.value):
 			continue
 		_values[key] = c.value
 		out.append(String(key))
@@ -544,7 +544,7 @@ func to_document() -> Dictionary:
 ## to make room for one the whole family shares), a returning player kept the old one and
 ## two actions shared a key. The document now records the default each value was saved
 ## under; one that still matches it follows. A document from before that record uses
-## [member DotSettingsDef.previous_defaults] instead, once.
+## [member GSSettingsDef.previous_defaults] instead, once.
 ##
 ## The rest is a choice and is kept, even where it equals an old default somewhere else.
 func _follow_defaults(saved_under: Dictionary) -> PackedStringArray:
@@ -553,16 +553,16 @@ func _follow_defaults(saved_under: Dictionary) -> PackedStringArray:
 		if def == null or not _values.has(def.key):
 			continue
 		var value: Variant = _values[def.key]
-		if DotValue.same(value, def.default_value):
+		if GSValue.same(value, def.default_value):
 			continue
 		var was_default := false
 		if saved_under.has(String(def.key)):
 			var c := def.coerce(saved_under[String(def.key)])
-			was_default = c.ok and DotValue.same(value, c.value)
+			was_default = c.ok and GSValue.same(value, c.value)
 		else:
 			for old in def.previous_defaults:
 				var c := def.coerce(old)
-				if c.ok and DotValue.same(value, c.value):
+				if c.ok and GSValue.same(value, c.value):
 					was_default = true
 					break
 		if was_default:
@@ -584,7 +584,7 @@ func _migrate(raw: Dictionary) -> Dictionary:
 			var out: Variant = (step as Callable).call(body)
 			if out is Dictionary:
 				body = out
-			DotLog.info(CHANNEL, "migrated settings", {"from": from, "to": from + 1})
+			GSLog.info(CHANNEL, "migrated settings", {"from": from, "to": from + 1})
 		from += 1
 		guard += 1
 
@@ -624,7 +624,7 @@ func apply_server_clamps(request: Dictionary) -> PackedStringArray:
 		clamped.emit(key, res.value, true)
 		changed.emit(key, get_value(key), &"server")
 	if not applied.is_empty():
-		DotLog.info(CHANNEL, "a server clamped settings", {"keys": ", ".join(applied)})
+		GSLog.info(CHANNEL, "a server clamped settings", {"keys": ", ".join(applied)})
 	return applied
 
 
@@ -635,7 +635,7 @@ func release_clamps() -> void:
 	for k in keys:
 		changed.emit(k, get_value(k), &"server")
 	if not keys.is_empty():
-		DotLog.info(CHANNEL, "server clamps released", {"count": keys.size()})
+		GSLog.info(CHANNEL, "server clamps released", {"count": keys.size()})
 
 
 ## The player's own value, ignoring any clamp. What a settings screen shows.
@@ -662,9 +662,9 @@ func _clamped_value(key: StringName, own: Variant) -> Variant:
 	# A clamp is a bound, not a value: a player who prefers 75 keeps 75 under a cap of 90.
 	# Every game that gets this wrong gets it wrong in the same direction, and the symptom
 	# is a setting that appears to reset itself on every join.
-	if def.kind == DotSettingsDef.Kind.INT:
+	if def.kind == GSSettingsDef.Kind.INT:
 		return mini(int(own), int(bound))
-	if def.kind == DotSettingsDef.Kind.FLOAT:
+	if def.kind == GSSettingsDef.Kind.FLOAT:
 		return minf(float(own), float(bound))
 	return bound
 
@@ -676,21 +676,21 @@ func _default_of(key: StringName) -> Variant:
 
 # --- GameSpice UI, without knowing GameSpice UI exists ----------------------------------
 
-## A [DotConfig] a generated settings panel can be pointed at.
+## A [GSConfig] a generated settings panel can be pointed at.
 ##
 ## A snapshot: writing to it does not write here. [method absorb_config] is the way back,
 ## and the two being separable is what a Cancel button is made of.
-func to_config() -> DotSettingsConfig:
+func to_config() -> GSSettingsConfig:
 	return schema.to_config(_values)
 
 
 ## Takes every value back out of a config, coercing and announcing each one.
-func absorb_config(cfg: DotSettingsConfig) -> PackedStringArray:
+func absorb_config(cfg: GSSettingsConfig) -> PackedStringArray:
 	var changed_keys := PackedStringArray()
 	var incoming := cfg.values()
 	for k in incoming.keys():
 		var key := StringName(str(k))
-		if DotValue.same(_values.get(key), incoming[k]):
+		if GSValue.same(_values.get(key), incoming[k]):
 			continue
 		var res := set_value(key, incoming[k], &"panel")
 		if res.ok:

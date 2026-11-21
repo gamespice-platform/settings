@@ -1,4 +1,4 @@
-class_name DotSettingsScratch
+class_name GSSettingsScratch
 extends RefCounted
 
 ## A settings directory of this process alone, for a suite or a render. [code]user://[/code] is shared by every run on the machine, and a
@@ -10,7 +10,7 @@ const ROOT := "user://scratch"
 
 
 ## A fresh, empty directory [code]user://scratch/<tag>_<pid>[/code] for this process, made
-## if it is missing and emptied if it is not. Hand it to [member DotSettingsStoreFile.directory].
+## if it is missing and emptied if it is not. Hand it to [member GSSettingsStoreFile.directory].
 static func use(tag: String) -> String:
 	sweep_dead()
 	var dir := "%s/%s_%d" % [ROOT, tag, OS.get_process_id()]

@@ -1,19 +1,19 @@
-class_name DotSettingsStoreFile
-extends DotSettingsStore
+class_name GSSettingsStoreFile
+extends GSSettingsStore
 
 ## JSON under [code]user://[/code], written atomically, flushed on every write.
 ##
 ## Three details are load-bearing and each one is a bug this family has already paid for
 ## somewhere:
 ##
-## [b]1. The write is atomic.[/b] [DotSaveStoreFile] writes a temporary file and
+## [b]1. The write is atomic.[/b] [GSSaveStoreFile] writes a temporary file and
 ## renames it. A settings file truncated by a crash mid-write is a player who lost every
 ## setting, and the moment a game is most likely to crash is while it is shutting down —
 ## which is exactly when the naive implementation writes.
 ##
 ## [b]2. [code]user://[/code] on the web is an IndexedDB mirror.[/b] It needs an explicit
-## flush or the write is in memory only and is gone when the tab closes. [DotSaveStoreFile]
-## calls [method DotWeb.sync_filesystem] for us, after a write, a removal and a set-aside alike.
+## flush or the write is in memory only and is gone when the tab closes. [GSSaveStoreFile]
+## calls [method GSWeb.sync_filesystem] for us, after a write, a removal and a set-aside alike.
 ##
 ## [b]3. The filename is sanitised with an explicit alphabet.[/b] Not
 ## [method String.is_valid_ascii_identifier], which is false for a digit — it answers "may
@@ -27,7 +27,7 @@ const CHANNEL := "settings"
 var directory: String = "user://settings"
 
 var _last_error: String = ""
-var _files: DotSaveStoreFile
+var _files: GSSaveStoreFile
 
 
 func _init(p_directory: String = "user://settings") -> void:
@@ -35,9 +35,9 @@ func _init(p_directory: String = "user://settings") -> void:
 
 
 ## The file store under this one. Names are made safe by [method _safe] before they get here, so no key rule is added; an unreadable file is kept aside as `.broken`.
-func files() -> DotSaveStoreFile:
+func files() -> GSSaveStoreFile:
 	if _files == null:
-		_files = DotSaveStoreFile.new()
+		_files = GSSaveStoreFile.new()
 		_files.suffix = ".json"
 		_files.aside_suffix = ".broken"
 		_files.key_check = func(key: String) -> bool: return not key.is_empty()
@@ -74,14 +74,14 @@ func _safe(s: String) -> String:
 	return out.substr(0, 64)
 
 
-func load_document(app_namespace: StringName, profile: StringName) -> DotResult:
+func load_document(app_namespace: StringName, profile: StringName) -> GSResult:
 	var path := _path(app_namespace, profile)
 	if not FileAccess.file_exists(path):
 		# A first run is not a failure. A store that says otherwise makes every caller
 		# write the same special case, and that is the one somebody gets wrong.
-		return DotResult.success({})
+		return GSResult.success({})
 
-	var res := DotPaths.read_json(path)
+	var res := GSPaths.read_json(path)
 	if not res.ok:
 		# A corrupt settings file must not stop a game booting. It is renamed rather than
 		# deleted, because the one thing worse than losing a settings file is losing it
@@ -89,37 +89,37 @@ func load_document(app_namespace: StringName, profile: StringName) -> DotResult:
 		_last_error = res.error.message
 		var salvage := path + ".broken"
 		files().set_aside(_key(app_namespace, profile))
-		DotLog.warn(
+		GSLog.warn(
 			CHANNEL,
 			"settings file unreadable, kept aside and starting from defaults",
 			{"path": path, "kept": salvage, "why": res.error.message}
 		)
-		return DotResult.success({})
+		return GSResult.success({})
 
 	var doc: Variant = res.value
 	if not (doc is Dictionary):
-		return DotResult.success({})
-	return DotResult.success(doc)
+		return GSResult.success({})
+	return GSResult.success(doc)
 
 
 func save_document(
 	app_namespace: StringName, profile: StringName, document: Dictionary
-) -> DotResult:
+) -> GSResult:
 	var res := files().write(_key(app_namespace, profile), JSON.stringify(document, "\t"))
 	if not res.ok:
 		_last_error = res.error.message
 		return res.wrap("saving settings")
-	return DotResult.success(null)
+	return GSResult.success(null)
 
 
-func clear_document(app_namespace: StringName, profile: StringName) -> DotResult:
+func clear_document(app_namespace: StringName, profile: StringName) -> GSResult:
 	var path := _path(app_namespace, profile)
 	if not FileAccess.file_exists(path):
-		return DotResult.success(null)
+		return GSResult.success(null)
 	var res := files().remove(_key(app_namespace, profile))
 	if not res.ok:
 		return res
-	return DotResult.success(null)
+	return GSResult.success(null)
 
 
 func writable() -> bool:
@@ -127,7 +127,7 @@ func writable() -> bool:
 	# read-only medium is a real deployment -- the answer decides whether the game tells
 	# the player their settings will not be kept, which is better than failing on every
 	# change in silence.
-	var probe := DotPaths.ensure_dir(directory)
+	var probe := GSPaths.ensure_dir(directory)
 	return probe.ok
 
 

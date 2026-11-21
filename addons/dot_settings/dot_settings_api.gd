@@ -1,9 +1,9 @@
 extends RefCounted
 
-## GameSpice Settings' API level. The rule for bumping it is on [DotAddonApi].
+## GameSpice Settings' API level. The rule for bumping it is on [GSAddonApi].
 
 # 1: everything before this file existed (an absent file reads as 1).
-# 2: DotSettingsScratch: a per-process scratch settings directory (use, is_scratch, sweep_dead).
+# 2: GSSettingsScratch: a per-process scratch settings directory (use, is_scratch, sweep_dead).
 
 const LEVEL := 2
 

@@ -1,5 +1,5 @@
 @tool
-class_name DotSettingsDef
+class_name GSSettingsDef
 extends Resource
 
 ## One setting: what it is called, what it may be, and who is allowed to touch it.
@@ -12,7 +12,7 @@ extends Resource
 ## and it is the bug it guards hardest against.
 ##
 ## The declaration is also the whole of the user interface. GameSpice UI's settings panel is
-## generated from a [DotConfig]; a [DotSettingsSchema] hands one over for exactly that
+## generated from a [GSConfig]; a [GSSettingsSchema] hands one over for exactly that
 ## reason, so a new setting appears on screen without anybody editing a screen.
 
 enum Kind {
@@ -36,13 +36,13 @@ enum Scope {
 	DEVICE,
 	## This person, everywhere they play. Sensitivity, crosshair, subtitles, language.
 	##
-	## What [member DotSettingsManager.shared_namespace] carries between games.
+	## What [member GSSettingsManager.shared_namespace] carries between games.
 	ACCOUNT,
 	## This person, but a server may clamp it.
 	##
 	## Field of view, view models, third person. A competitive server capping FOV is a
 	## legitimate rule; the same server reading a player's key bindings is a fingerprint.
-	## See [DotSettingsPolicy].
+	## See [GSSettingsPolicy].
 	SERVER_CLAMPED,
 }
 
@@ -87,14 +87,14 @@ enum Scope {
 
 ## Whether this value must never be synchronised, logged, or sent anywhere.
 ##
-## Not "secret" in the credential sense — [DotConfig.sensitive_keys] covers that — but
+## Not "secret" in the credential sense — [GSConfig.sensitive_keys] covers that — but
 ## "this is nobody else's business". A device name, a microphone id, a save directory.
 @export var private: bool = false
 
 ## Defaults this setting shipped with before [member default_value], oldest first.
 ##
 ## [b]For documents saved before they recorded their defaults.[/b] A document now stores the
-## default each value was saved under ([DotSettingsManager]'s `defaults` section), so a value
+## default each value was saved under ([GSSettingsManager]'s `defaults` section), so a value
 ## still equal to it follows a new default by itself. An older document has no such record:
 ## a stored value equal to one of these is read as "never chosen" and moves to the current
 ## default once, and the next save records the default it is under. Without it, a player who
@@ -109,46 +109,46 @@ enum Scope {
 ## refuses only what is genuinely not this setting. A settings file is edited by hand more
 ## often than any other file in a game, and a whole file rejected because one slider is
 ## out of range is a player who lost every other setting they had.
-func coerce(value: Variant) -> DotResult:
+func coerce(value: Variant) -> GSResult:
 	match kind:
 		Kind.BOOL:
 			if value is bool:
-				return DotResult.success(value)
+				return GSResult.success(value)
 			if value is int or value is float:
-				return DotResult.success(float(value) != 0.0)
+				return GSResult.success(float(value) != 0.0)
 			if value is String or value is StringName:
 				var s := String(value).to_lower()
 				if s in ["1", "true", "yes", "on"]:
-					return DotResult.success(true)
+					return GSResult.success(true)
 				if s in ["0", "false", "no", "off"]:
-					return DotResult.success(false)
+					return GSResult.success(false)
 			return _refuse(value, "a true/false value")
 
 		Kind.INT:
 			if value is bool:
-				return DotResult.success(1 if value else 0)
+				return GSResult.success(1 if value else 0)
 			if value is int or value is float:
-				return DotResult.success(_clamp_number(float(value)))
+				return GSResult.success(_clamp_number(float(value)))
 			if value is String and String(value).is_valid_int():
-				return DotResult.success(_clamp_number(float(String(value).to_int())))
+				return GSResult.success(_clamp_number(float(String(value).to_int())))
 			return _refuse(value, "a whole number")
 
 		Kind.FLOAT:
 			if value is int or value is float:
-				return DotResult.success(float(_clamp_number(float(value))))
+				return GSResult.success(float(_clamp_number(float(value))))
 			if value is String and String(value).is_valid_float():
-				return DotResult.success(float(_clamp_number(String(value).to_float())))
+				return GSResult.success(float(_clamp_number(String(value).to_float())))
 			return _refuse(value, "a number")
 
 		Kind.ENUM:
 			var want := StringName(str(value))
 			if options.has(want):
-				return DotResult.success(want)
+				return GSResult.success(want)
 			# An unknown option is the one case worth refusing outright: silently
 			# substituting the default means a renamed option puts everybody back to
 			# "low" with nothing said.
-			return DotResult.fail(
-				DotError.CODE_INVALID,
+			return GSResult.fail(
+				GSError.CODE_INVALID,
 				"'%s' is not one of %s's options" % [str(value), key],
 				", ".join(_option_strings())
 			)
@@ -157,7 +157,7 @@ func coerce(value: Variant) -> DotResult:
 			var s := str(value)
 			if s.length() > max_length:
 				s = s.substr(0, max_length)
-			return DotResult.success(s)
+			return GSResult.success(s)
 
 
 ## Clamps and snaps, returning an [int] for [constant Kind.INT] and a [float] otherwise.
@@ -176,9 +176,9 @@ func _clamp_number(v: float) -> Variant:
 	return int(round(out)) if kind == Kind.INT else out
 
 
-func _refuse(value: Variant, wanted: String) -> DotResult:
-	return DotResult.fail(
-		DotError.CODE_INVALID,
+func _refuse(value: Variant, wanted: String) -> GSResult:
+	return GSResult.fail(
+		GSError.CODE_INVALID,
 		"%s wants %s" % [key, wanted],
 		"got %s" % type_string(typeof(value))
 	)
@@ -191,36 +191,36 @@ func _option_strings() -> PackedStringArray:
 	return out
 
 
-func validate() -> DotResult:
+func validate() -> GSResult:
 	if key == &"":
-		return DotResult.fail(DotError.CODE_INVALID, "a setting with no key")
+		return GSResult.fail(GSError.CODE_INVALID, "a setting with no key")
 	if not String(key).is_valid_ascii_identifier():
-		return DotResult.fail(
-			DotError.CODE_INVALID,
+		return GSResult.fail(
+			GSError.CODE_INVALID,
 			"'%s' is not a usable key" % key,
 			"keys become filenames, JSON keys and console names, so they are identifiers"
 		)
 	if kind == Kind.ENUM:
 		if options.is_empty():
-			return DotResult.fail(DotError.CODE_INVALID, "%s is an enum with no options" % key)
+			return GSResult.fail(GSError.CODE_INVALID, "%s is an enum with no options" % key)
 		if not options.has(StringName(str(default_value))):
-			return DotResult.fail(
-				DotError.CODE_INVALID,
+			return GSResult.fail(
+				GSError.CODE_INVALID,
 				"%s defaults to '%s', which is not one of its options" % [key, str(default_value)]
 			)
 	if (kind == Kind.INT or kind == Kind.FLOAT) and max_value < min_value:
-		return DotResult.fail(DotError.CODE_INVALID, "%s has a maximum below its minimum" % key)
+		return GSResult.fail(GSError.CODE_INVALID, "%s has a maximum below its minimum" % key)
 	var d := coerce(default_value)
 	if not d.ok:
 		return d.wrap("%s's own default" % key)
-	return DotResult.success(null)
+	return GSResult.success(null)
 
 
 ## Convenience constructors, so a schema reads as a list rather than as eight lines each.
 static func boolean(
 	p_key: StringName, p_default: bool, p_category: StringName = &"general"
-) -> DotSettingsDef:
-	var d := DotSettingsDef.new()
+) -> GSSettingsDef:
+	var d := GSSettingsDef.new()
 	d.key = p_key
 	d.kind = Kind.BOOL
 	d.default_value = p_default
@@ -235,8 +235,8 @@ static func number(
 	p_max: float,
 	p_category: StringName = &"general",
 	p_step: float = 0.0
-) -> DotSettingsDef:
-	var d := DotSettingsDef.new()
+) -> GSSettingsDef:
+	var d := GSSettingsDef.new()
 	d.key = p_key
 	d.kind = Kind.FLOAT
 	d.default_value = p_default
@@ -253,8 +253,8 @@ static func integer(
 	p_min: int,
 	p_max: int,
 	p_category: StringName = &"general"
-) -> DotSettingsDef:
-	var d := DotSettingsDef.new()
+) -> GSSettingsDef:
+	var d := GSSettingsDef.new()
 	d.key = p_key
 	d.kind = Kind.INT
 	d.default_value = p_default
@@ -270,8 +270,8 @@ static func choice(
 	p_default: StringName,
 	p_options: Array[StringName],
 	p_category: StringName = &"general"
-) -> DotSettingsDef:
-	var d := DotSettingsDef.new()
+) -> GSSettingsDef:
+	var d := GSSettingsDef.new()
 	d.key = p_key
 	d.kind = Kind.ENUM
 	d.options = p_options
@@ -282,8 +282,8 @@ static func choice(
 
 static func text(
 	p_key: StringName, p_default: String, p_category: StringName = &"general"
-) -> DotSettingsDef:
-	var d := DotSettingsDef.new()
+) -> GSSettingsDef:
+	var d := GSSettingsDef.new()
 	d.key = p_key
 	d.kind = Kind.STRING
 	d.default_value = p_default
@@ -291,7 +291,7 @@ static func text(
 	return d
 
 
-## An input binding, stored as the text form [DotInputBinding] reads and writes.
+## An input binding, stored as the text form [GSInputBinding] reads and writes.
 ##
 ## [b]Text rather than a keycode.[/b] A settings document is written to disk, may be
 ## synchronised to an account and is edited by hand more than any other file in a game.
@@ -303,8 +303,8 @@ static func text(
 ## that it is declared, bounded, scoped and enumerable.
 static func binding(
 	p_key: StringName, p_default: String, p_category: StringName = &"controls"
-) -> DotSettingsDef:
-	var d := DotSettingsDef.new()
+) -> GSSettingsDef:
+	var d := GSSettingsDef.new()
 	d.key = p_key
 	d.kind = Kind.BINDING
 	d.default_value = p_default
@@ -315,30 +315,30 @@ static func binding(
 
 
 ## Returns self, so the constructors chain.
-func with_scope(p_scope: Scope) -> DotSettingsDef:
+func with_scope(p_scope: Scope) -> GSSettingsDef:
 	scope = p_scope
 	return self
 
 
-func with_description(p_text: String) -> DotSettingsDef:
+func with_description(p_text: String) -> GSSettingsDef:
 	description = p_text
 	return self
 
 
-func as_private() -> DotSettingsDef:
+func as_private() -> GSSettingsDef:
 	private = true
 	return self
 
 
 ## Declares what this setting's default used to be ([member previous_defaults]).
-func with_previous_defaults(values: Array) -> DotSettingsDef:
+func with_previous_defaults(values: Array) -> GSSettingsDef:
 	for v in values:
 		if not previous_defaults.has(v):
 			previous_defaults.append(v)
 	return self
 
 
-func needing_restart() -> DotSettingsDef:
+func needing_restart() -> GSSettingsDef:
 	requires_restart = true
 	return self
 
